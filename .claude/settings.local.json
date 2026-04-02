@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude skill:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(curl:*)",
+      "Bash(pnpm add:*)",
+      "Bash(python3:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(grep -r \"createEventStream\\\\|sendStream\" /Users/mangtri/Web/leadsense-ai/node_modules/h3/dist/*.d.ts)",
+      "Bash(node:*)",
+      "Bash(find /Users/mangtri/Web/leadsense-ai/node_modules/.pnpm/h3@2.0.1-rc.11 -name \"*.d.ts\" -exec grep -l \"Event\" {} \\\\;)",
+      "Bash(pnpm db:seed:*)",
+      "WebFetch(domain:www.anthropic.com)",
+      "WebFetch(domain:claude.com)"
+    ]
+  }
+}
