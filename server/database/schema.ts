@@ -21,6 +21,8 @@ export const leads = pgTable('leads', {
   budget: text('budget'),
   travelDate: text('travel_date'),
   paxCount: integer('pax_count'),
+  email: text('email'),
+  phone: text('phone'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()
 }, table => [

@@ -1,13 +1,9 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  modules: [
-    '@nuxt/eslint',
-    '@nuxt/ui',
-    'nuxt-auth-utils'
-  ],
+  modules: ['@nuxt/eslint', '@nuxt/ui', 'nuxt-auth-utils'],
 
   devtools: {
-    enabled: true
+    enabled: true,
   },
 
   css: ['~/assets/css/main.css'],
@@ -16,11 +12,15 @@ export default defineNuxtConfig({
     databaseUrl: process.env.DATABASE_URL,
     sessionPassword: process.env.NUXT_SESSION_PASSWORD,
     anthropicApiKey: process.env.ANTHROPIC_API_KEY,
-    anthropicModel: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5'
+    anthropicModel: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5',
+    resendApiKey: process.env.RESEND_API_KEY,
+    resendFrom: process.env.RESEND_FROM,
+    resendAlertTo: process.env.RESEND_ALERT_TO,
+    appUrl: process.env.APP_URL || 'http://localhost:3000',
   },
 
   routeRules: {
-    '/': { ssr: false }
+    '/': { ssr: false },
   },
 
   compatibilityDate: '2025-01-15',
@@ -29,8 +29,8 @@ export default defineNuxtConfig({
     config: {
       stylistic: {
         commaDangle: 'never',
-        braceStyle: '1tbs'
-      }
-    }
-  }
+        braceStyle: '1tbs',
+      },
+    },
+  },
 })

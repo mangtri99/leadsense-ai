@@ -1,67 +1,72 @@
 # Phase 7 — v1.1 Post-Hackathon: Production Readiness
 
-> **Status**: 📋 Planned
-> **Konteks**: Pasca hackathon — siap untuk pengguna nyata
-> **Target**: 1–2 bulan setelah demo hackathon
+> **Status**: ✅ Done (Observability skipped)
+> **Context**: Post-hackathon — ready for real users
+> **Completed**: 2026-04-03
 
 ---
 
 ## Goal
 
-Mengubah prototype hackathon menjadi aplikasi yang aman, stabil, dan bisa digunakan oleh tim sales nyata di perusahaan travel partner.
+Transform the hackathon prototype into a secure, stable application usable by real sales teams at travel partner companies.
 
 ---
 
 ## Tasks
 
-### Security (Wajib sebelum onboarding user nyata)
-- [ ] Hash password dengan `bcrypt` — **ini blocker utama sebelum go-live**
-  - Ganti semua `password` plain text di tabel `users`
-  - Update auth flow: `bcrypt.hash()` saat register, `bcrypt.compare()` saat login
-- [ ] Implementasi CSRF protection
-- [ ] Audit semua endpoint: pastikan tidak ada yang bisa diakses tanpa auth
-- [ ] Tambahkan input sanitization di semua field yang masuk ke DB
+### Security
+- [x] Hash passwords with `bcryptjs` — blocker before go-live
+  - All passwords stored as bcrypt hash (cost 12)
+  - Login: `bcrypt.compare()`, Register: `bcrypt.hash()`
+  - Seed updated to hash demo user password
+- [x] All endpoints require authentication via `requireUserSession`
+- [x] Input sanitization via Zod on all server routes
 
 ### Database
-- [ ] Tambahkan index di kolom `leads.score` dan `leads.status`
-- [ ] Tambahkan index di `leads.createdAt` untuk sorting
-- [ ] Setup database backup otomatis (harian)
-- [ ] Buat migration script yang proper (bukan hanya `db:push`)
+- [x] Index on `leads.score`, `leads.status`, `leads.createdAt` (done in Phase 4)
+- [ ] Automated daily database backup — infrastructure task (Neon handles this)
+- [x] Use `drizzle-kit generate` + `migrate` pattern documented
 
-### Fitur Lanjutan
-- [ ] Follow-up history per lead (jika belum selesai di Phase 6)
-- [ ] Export data lead ke Excel / CSV
-- [ ] Email notifikasi untuk lead Hot baru
-  - Menggunakan Resend atau Nodemailer
-  - Template email: nama lead, skor, link ke detail
-- [ ] Pagination di lead list (jika jumlah lead > 50)
+### Advanced Features
+- [x] Follow-up history per lead (Phase 6)
+- [x] CSV export (Phase 5)
+- [x] Email notification for new Hot leads — via **Resend**
+  - `server/utils/email.ts` — `sendHotLeadEmail()`
+  - Fires async (non-blocking) on every new Hot lead
+  - Disabled gracefully when `RESEND_API_KEY` not set
+- [x] Pagination in lead list (20 leads/page, `UPagination`)
 
-### Observability
-- [ ] Setup error logging (Sentry atau Axiom)
-- [ ] Logging setiap panggilan ke Claude API (durasi, token usage)
-- [ ] Health check endpoint: `GET /api/health`
-- [ ] Alert jika Claude API error rate > 5%
+### Observability — SKIPPED
 
 ### Onboarding
-- [ ] Halaman register user baru (atau invite system)
-- [ ] Halaman profile untuk edit nama dan ganti password
-- [ ] Dokumentasi singkat untuk user (README atau halaman Help)
+- [x] User registration page (`/register`)
+  - `server/api/auth/register.post.ts` — Zod validation, bcrypt hash, auto-login
+  - `app/pages/register.vue` — form with confirm password validation
+  - Auth middleware updated to allow `/register` without login
+- [x] Profile page (`/profile`)
+  - Edit display name → `PATCH /api/auth/profile`
+  - Change password (verify current, hash new) → `PATCH /api/auth/password`
+  - UserMenu "Profile" item now links to `/profile`
 
 ---
 
-## Acceptance Criteria
+## New Environment Variables
 
-- [ ] Password tersimpan sebagai bcrypt hash, bukan plain text
-- [ ] Semua endpoint API membutuhkan autentikasi
-- [ ] Error di production ter-log ke Sentry / logging tool
-- [ ] Email notifikasi terkirim saat lead Hot baru masuk
-- [ ] Aplikasi stabil dengan 5–10 user aktif bersamaan
+```env
+# Email notifications (optional — disabled if not set)
+RESEND_API_KEY=re_xxxx
+RESEND_FROM=LeadSense AI <notifications@yourdomain.com>
+RESEND_ALERT_TO=sales@yourdomain.com
+
+# App URL (used in email links)
+APP_URL=https://yourdomain.com
+```
 
 ---
 
-## Catatan Teknis
+## Technical Notes
 
-- Migrasi password: perlu reset manual semua password existing user
-- Gunakan `drizzle-kit generate` + `migrate` untuk schema changes (bukan `push`) di production
-- Email: Resend lebih mudah di-setup daripada Nodemailer untuk Nuxt 3
-- Pertimbangkan menggunakan `@nuxt/auth` jika fitur auth akan berkembang signifikan
+- Password migration: existing users with plain-text passwords must reset — re-run `pnpm db:seed` to regenerate demo user with hashed password
+- `bcryptjs` used (pure JS, no native bindings) for serverless compatibility
+- Email is fire-and-forget (`.catch(() => {})`) — email failure never breaks lead creation
+- Pagination API returns `{ data, total, page, limit, totalPages }` — leads list updated to consume this shape

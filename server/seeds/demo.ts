@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import { neon } from '@neondatabase/serverless'
 import { drizzle } from 'drizzle-orm/neon-http'
+import bcrypt from 'bcryptjs'
 import { leads, users } from '../database/schema'
 
 async function seed() {
@@ -24,10 +25,11 @@ async function seed() {
   let demoUserId = existingUsers[0]?.id
 
   if (!demoUserId) {
+    const hashedPassword = await bcrypt.hash('demo123', 12)
     const [newUser] = await db.insert(users).values({
       name: 'Demo Sales',
       email: 'demo@leadsense.ai',
-      password: 'demo123'
+      password: hashedPassword
     }).returning()
     demoUserId = newUser.id
     console.log('✓ Demo user dibuat')

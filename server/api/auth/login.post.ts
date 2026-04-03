@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm'
+import bcrypt from 'bcryptjs'
 import { users } from '../../database/schema'
 
 export default defineEventHandler(async (event) => {
@@ -11,7 +12,7 @@ export default defineEventHandler(async (event) => {
   const db = useDb()
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
 
-  if (!user || user.password !== password) {
+  if (!user || !(await bcrypt.compare(password, user.password))) {
     throw createError({ statusCode: 401, message: 'Incorrect email or password.' })
   }
 

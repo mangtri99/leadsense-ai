@@ -149,21 +149,39 @@ async function addFollowUp() {
               >
                 {{ lead.aiAnalysis }}
               </p>
-              <p class="text-xs text-muted mt-2">
-                <UIcon
-                  name="i-lucide-clock"
-                  class="size-3 inline mr-1"
-                />
-                {{ formatDate(lead.createdAt) }}
-                <span
-                  v-if="lead.source"
-                  class="ml-2"
-                >
+              <p class="text-xs text-muted mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span>
+                  <UIcon
+                    name="i-lucide-clock"
+                    class="size-3 inline mr-1"
+                  />{{ formatDate(lead.createdAt) }}
+                </span>
+                <span v-if="lead.source">
                   <UIcon
                     name="i-lucide-tag"
                     class="size-3 inline mr-1"
                   />{{ lead.source }}
                 </span>
+                <a
+                  v-if="(lead as any).email"
+                  :href="`mailto:${(lead as any).email}`"
+                  class="hover:text-primary transition-colors"
+                >
+                  <UIcon
+                    name="i-lucide-mail"
+                    class="size-3 inline mr-1"
+                  />{{ (lead as any).email }}
+                </a>
+                <a
+                  v-if="(lead as any).phone"
+                  :href="`tel:${(lead as any).phone}`"
+                  class="hover:text-primary transition-colors"
+                >
+                  <UIcon
+                    name="i-lucide-phone"
+                    class="size-3 inline mr-1"
+                  />{{ (lead as any).phone }}
+                </a>
               </p>
             </div>
           </div>

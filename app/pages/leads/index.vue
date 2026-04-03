@@ -5,14 +5,34 @@ const route = useRoute()
 const router = useRouter()
 
 const activeStatus = ref((route.query.status as string) || '')
+const currentPage = ref(Number(route.query.page) || 1)
 
-watch(activeStatus, (val) => {
-  router.replace({ query: val ? { status: val } : {} })
+watch(activeStatus, () => {
+  currentPage.value = 1
+  router.replace({ query: { ...(activeStatus.value ? { status: activeStatus.value } : {}), page: 1 } })
 })
 
-const { data: leads, pending, refresh } = await useFetch<Lead[]>('/api/leads', {
-  query: computed(() => activeStatus.value ? { status: activeStatus.value } : {})
+watch(currentPage, (val) => {
+  router.replace({ query: { ...(activeStatus.value ? { status: activeStatus.value } : {}), page: val } })
 })
+
+const { data, pending, refresh } = await useFetch<{
+  data: Lead[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}>('/api/leads', {
+  query: computed(() => ({
+    ...(activeStatus.value ? { status: activeStatus.value } : {}),
+    page: currentPage.value,
+    limit: 20
+  }))
+})
+
+const leads = computed(() => data.value?.data ?? [])
+const totalPages = computed(() => data.value?.totalPages ?? 1)
+const total = computed(() => data.value?.total ?? 0)
 
 const statusOptions = [
   { label: 'All', value: '' },
@@ -82,6 +102,10 @@ function exportCSV() {
           </div>
         </template>
         <template #right>
+          <span
+            v-if="total > 0"
+            class="text-xs text-muted"
+          >{{ total }} leads</span>
           <UButton
             icon="i-lucide-download"
             color="neutral"
@@ -106,10 +130,10 @@ function exportCSV() {
     </template>
 
     <template #body>
-      <div class="p-4 lg:p-6">
+      <div class="p-4 lg:p-6 flex flex-col gap-4">
         <!-- Empty state -->
         <div
-          v-if="!pending && (!leads || leads.length === 0)"
+          v-if="!pending && leads.length === 0"
           class="flex flex-col items-center justify-center py-20 text-center"
         >
           <UIcon
@@ -222,6 +246,18 @@ function exportCSV() {
               </div>
             </UCard>
           </NuxtLink>
+        </div>
+
+        <!-- Pagination -->
+        <div
+          v-if="totalPages > 1"
+          class="flex justify-center pt-2"
+        >
+          <UPagination
+            v-model:page="currentPage"
+            :total="total"
+            :items-per-page="20"
+          />
         </div>
       </div>
     </template>

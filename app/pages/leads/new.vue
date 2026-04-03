@@ -14,7 +14,9 @@ const schema = z.object({
 const state = reactive({
   name: '',
   rawMessage: '',
-  source: 'WhatsApp'
+  source: 'WhatsApp',
+  email: '',
+  phone: ''
 })
 
 const sourceOptions = [
@@ -115,6 +117,34 @@ const statusConfig: Record<string, { color: string, icon: string, bg: string, ri
                   :options="sourceOptions"
                   value-key="value"
                   label-key="label"
+                  class="w-full"
+                />
+              </UFormField>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <UFormField
+                label="Email"
+                name="email"
+              >
+                <UInput
+                  v-model="state.email"
+                  type="email"
+                  placeholder="customer@example.com"
+                  icon="i-lucide-mail"
+                  class="w-full"
+                />
+              </UFormField>
+
+              <UFormField
+                label="Phone / WhatsApp"
+                name="phone"
+              >
+                <UInput
+                  v-model="state.phone"
+                  type="tel"
+                  placeholder="+62 812 3456 7890"
+                  icon="i-lucide-phone"
                   class="w-full"
                 />
               </UFormField>
