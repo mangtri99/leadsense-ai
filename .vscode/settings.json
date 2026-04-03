@@ -1,0 +1,21 @@
+{
+  // Use ESLint as the formatter for JS/TS/Vue files
+  "editor.formatOnSave": false,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+
+  // Disable default formatters for TS/JS to avoid conflicts
+  "[typescript]": {
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+  },
+  "[vue]": {
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+  },
+
+  // Tell ESLint to validate these file types
+  "eslint.validate": ["javascript", "typescript", "vue"]
+}

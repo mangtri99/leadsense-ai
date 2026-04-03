@@ -15,15 +15,17 @@ export default defineEventHandler(async (event) => {
         .select({ count: count() })
         .from(leads)
         .where(eq(leads.status, status))
-      return { status, count: result.count }
+      return { status, count: result?.count }
     })
   )
 
-  const breakdown = Object.fromEntries(statusCounts.map(s => [s.status, s.count]))
+  const breakdown = Object.fromEntries(
+    statusCounts.map(s => [s.status, s.count])
+  )
 
   return {
-    total: totalResult.total,
-    averageScore: avgResult.avg ? Math.round(Number(avgResult.avg)) : 0,
+    total: totalResult?.total,
+    avg: avgResult?.avg,
     breakdown: {
       Hot: breakdown.Hot || 0,
       Warm: breakdown.Warm || 0,
