@@ -69,6 +69,31 @@ async function addFollowUp() {
     addingNote.value = false
   }
 }
+
+// Hotel recommendations
+interface Hotel {
+  id: string
+  name: string
+  starRating: number | null
+  guestRating: number
+  guestRatingCount: number
+  price: number
+  strikethroughPrice: number | null
+  strikethroughDesc: string | null
+  currency: string
+  image: string | null
+  propertyType: string
+  city: string
+  country: string
+  displayName: string
+  isRefundable: boolean
+  amenities: string[]
+}
+
+const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/hotels', {
+  query: computed(() => ({ destination: lead.value?.destination || '', limit: 6 })),
+  immediate: !!lead.value?.destination
+})
 </script>
 
 <template>
@@ -109,252 +134,411 @@ async function addFollowUp() {
     <template #body>
       <div
         v-if="lead"
-        class="p-4 lg:p-6 max-w-3xl mx-auto space-y-6"
+        class="p-4 lg:p-6"
       >
-        <!-- Score header -->
-        <UCard>
-          <div class="flex items-center gap-4">
-            <div
-              class="w-20 h-20 rounded-full flex flex-col items-center justify-center text-center ring-4 shrink-0"
-              :class="[statusConfig[lead.status!]?.bg, statusConfig[lead.status!]?.ring]"
-            >
-              <span
-                class="text-2xl font-bold"
-                :class="statusConfig[lead.status!]?.color"
-              >
-                {{ lead.score ?? '?' }}
-              </span>
-              <span
-                class="text-xs"
-                :class="statusConfig[lead.status!]?.color"
-              >/ 100</span>
-            </div>
-            <div class="flex-1">
-              <div class="flex items-center gap-2 mb-1">
-                <UIcon
-                  v-if="lead.status"
-                  :name="statusConfig[lead.status]?.icon"
-                  :class="['size-5', statusConfig[lead.status]?.color]"
-                />
-                <span
-                  class="text-xl font-bold"
-                  :class="statusConfig[lead.status!]?.color"
+        <div class="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6 max-w-7xl mx-auto items-start">
+          <!-- Left column: lead detail -->
+          <div class="space-y-6">
+            <!-- Score header -->
+            <UCard>
+              <div class="flex items-center gap-4">
+                <div
+                  class="w-20 h-20 rounded-full flex flex-col items-center justify-center text-center ring-4 shrink-0"
+                  :class="[statusConfig[lead.status!]?.bg, statusConfig[lead.status!]?.ring]"
                 >
-                  {{ lead.status || 'Not analyzed yet' }}
-                </span>
-              </div>
-              <p
-                v-if="lead.aiAnalysis"
-                class="text-sm text-muted"
-              >
-                {{ lead.aiAnalysis }}
-              </p>
-              <p class="text-xs text-muted mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span>
-                  <UIcon
-                    name="i-lucide-clock"
-                    class="size-3 inline mr-1"
-                  />{{ formatDate(lead.createdAt) }}
-                </span>
-                <span v-if="lead.source">
-                  <UIcon
-                    name="i-lucide-tag"
-                    class="size-3 inline mr-1"
-                  />{{ lead.source }}
-                </span>
-                <a
-                  v-if="(lead as any).email"
-                  :href="`mailto:${(lead as any).email}`"
-                  class="hover:text-primary transition-colors"
-                >
-                  <UIcon
-                    name="i-lucide-mail"
-                    class="size-3 inline mr-1"
-                  />{{ (lead as any).email }}
-                </a>
-                <a
-                  v-if="(lead as any).phone"
-                  :href="`tel:${(lead as any).phone}`"
-                  class="hover:text-primary transition-colors"
-                >
-                  <UIcon
-                    name="i-lucide-phone"
-                    class="size-3 inline mr-1"
-                  />{{ (lead as any).phone }}
-                </a>
-              </p>
-            </div>
-          </div>
-        </UCard>
-
-        <!-- Extracted Info -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <UCard v-if="lead.destination">
-            <p class="text-xs text-muted mb-1">
-              Destination
-            </p>
-            <div class="flex items-center gap-1.5">
-              <UIcon
-                name="i-lucide-map-pin"
-                class="size-4 text-primary shrink-0"
-              />
-              <p class="font-medium text-highlighted text-sm">
-                {{ lead.destination }}
-              </p>
-            </div>
-          </UCard>
-          <UCard v-if="lead.budget">
-            <p class="text-xs text-muted mb-1">
-              Budget
-            </p>
-            <div class="flex items-center gap-1.5">
-              <UIcon
-                name="i-lucide-wallet"
-                class="size-4 text-primary shrink-0"
-              />
-              <p class="font-medium text-highlighted text-sm">
-                {{ lead.budget }}
-              </p>
-            </div>
-          </UCard>
-          <UCard v-if="lead.paxCount">
-            <p class="text-xs text-muted mb-1">
-              Pax Count
-            </p>
-            <div class="flex items-center gap-1.5">
-              <UIcon
-                name="i-lucide-users"
-                class="size-4 text-primary shrink-0"
-              />
-              <p class="font-medium text-highlighted text-sm">
-                {{ lead.paxCount }} pax
-              </p>
-            </div>
-          </UCard>
-          <UCard v-if="lead.travelDate">
-            <p class="text-xs text-muted mb-1">
-              Travel Date
-            </p>
-            <div class="flex items-center gap-1.5">
-              <UIcon
-                name="i-lucide-calendar"
-                class="size-4 text-primary shrink-0"
-              />
-              <p class="font-medium text-highlighted text-sm">
-                {{ lead.travelDate }}
-              </p>
-            </div>
-          </UCard>
-        </div>
-
-        <!-- Pesan Asli -->
-        <UCard>
-          <template #header>
-            <p class="font-semibold text-highlighted">
-              Original Inquiry Message
-            </p>
-          </template>
-          <p class="text-sm text-default whitespace-pre-line bg-elevated/50 rounded-lg p-3">
-            {{ lead.rawMessage }}
-          </p>
-        </UCard>
-
-        <!-- Draft Balasan -->
-        <UCard v-if="lead.aiReplyDraft">
-          <template #header>
-            <div class="flex items-center justify-between">
-              <p class="font-semibold text-highlighted">
-                Reply Draft
-              </p>
-              <UButton
-                :icon="copied ? 'i-lucide-check' : 'i-lucide-copy'"
-                :color="copied ? 'success' : 'neutral'"
-                variant="ghost"
-                size="sm"
-                @click="copy(lead!.aiReplyDraft || '')"
-              >
-                {{ copied ? 'Copied!' : 'Copy' }}
-              </UButton>
-            </div>
-          </template>
-          <p class="text-sm text-default whitespace-pre-line">
-            {{ lead.aiReplyDraft }}
-          </p>
-        </UCard>
-
-        <!-- Follow-up History -->
-        <UCard>
-          <template #header>
-            <div class="flex items-center justify-between">
-              <p class="font-semibold text-highlighted">
-                Follow-up History
-              </p>
-              <UBadge
-                v-if="followUps?.length"
-                color="neutral"
-                variant="subtle"
-              >
-                {{ followUps.length }}
-              </UBadge>
-            </div>
-          </template>
-
-          <!-- List catatan -->
-          <div
-            v-if="followUps?.length"
-            class="space-y-3 mb-4"
-          >
-            <div
-              v-for="fu in followUps"
-              :key="fu.id"
-              class="flex gap-3"
-            >
-              <div class="shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <UIcon
-                  name="i-lucide-user"
-                  class="size-4 text-primary"
-                />
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2">
-                  <span class="text-sm font-medium text-highlighted">{{ fu.userName || 'Sales' }}</span>
-                  <span class="text-xs text-muted">{{ timeAgo(fu.createdAt) }}</span>
+                  <span
+                    class="text-2xl font-bold"
+                    :class="statusConfig[lead.status!]?.color"
+                  >
+                    {{ lead.score ?? '?' }}
+                  </span>
+                  <span
+                    class="text-xs"
+                    :class="statusConfig[lead.status!]?.color"
+                  >/ 100</span>
                 </div>
-                <p class="text-sm text-default mt-0.5">
-                  {{ fu.note }}
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <UIcon
+                      v-if="lead.status"
+                      :name="statusConfig[lead.status]?.icon"
+                      :class="['size-5', statusConfig[lead.status]?.color]"
+                    />
+                    <span
+                      class="text-xl font-bold"
+                      :class="statusConfig[lead.status!]?.color"
+                    >
+                      {{ lead.status || 'Not analyzed yet' }}
+                    </span>
+                  </div>
+                  <p
+                    v-if="lead.aiAnalysis"
+                    class="text-sm text-muted"
+                  >
+                    {{ lead.aiAnalysis }}
+                  </p>
+                  <p class="text-xs text-muted mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span>
+                      <UIcon
+                        name="i-lucide-clock"
+                        class="size-3 inline mr-1"
+                      />{{ formatDate(lead.createdAt) }}
+                    </span>
+                    <span v-if="lead.source">
+                      <UIcon
+                        name="i-lucide-tag"
+                        class="size-3 inline mr-1"
+                      />{{ lead.source }}
+                    </span>
+                    <a
+                      v-if="(lead as any).email"
+                      :href="`mailto:${(lead as any).email}`"
+                      class="hover:text-primary transition-colors"
+                    >
+                      <UIcon
+                        name="i-lucide-mail"
+                        class="size-3 inline mr-1"
+                      />{{ (lead as any).email }}
+                    </a>
+                    <a
+                      v-if="(lead as any).phone"
+                      :href="`tel:${(lead as any).phone}`"
+                      class="hover:text-primary transition-colors"
+                    >
+                      <UIcon
+                        name="i-lucide-phone"
+                        class="size-3 inline mr-1"
+                      />{{ (lead as any).phone }}
+                    </a>
+                  </p>
+                </div>
+              </div>
+            </UCard>
+
+            <!-- Extracted Info -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <UCard v-if="lead.destination">
+                <p class="text-xs text-muted mb-1">
+                  Destination
+                </p>
+                <div class="flex items-center gap-1.5">
+                  <UIcon
+                    name="i-lucide-map-pin"
+                    class="size-4 text-primary shrink-0"
+                  />
+                  <p class="font-medium text-highlighted text-sm">
+                    {{ lead.destination }}
+                  </p>
+                </div>
+              </UCard>
+              <UCard v-if="lead.budget">
+                <p class="text-xs text-muted mb-1">
+                  Budget
+                </p>
+                <div class="flex items-center gap-1.5">
+                  <UIcon
+                    name="i-lucide-wallet"
+                    class="size-4 text-primary shrink-0"
+                  />
+                  <p class="font-medium text-highlighted text-sm">
+                    {{ lead.budget }}
+                  </p>
+                </div>
+              </UCard>
+              <UCard v-if="lead.paxCount">
+                <p class="text-xs text-muted mb-1">
+                  Pax Count
+                </p>
+                <div class="flex items-center gap-1.5">
+                  <UIcon
+                    name="i-lucide-users"
+                    class="size-4 text-primary shrink-0"
+                  />
+                  <p class="font-medium text-highlighted text-sm">
+                    {{ lead.paxCount }} pax
+                  </p>
+                </div>
+              </UCard>
+              <UCard v-if="lead.travelDate">
+                <p class="text-xs text-muted mb-1">
+                  Travel Date
+                </p>
+                <div class="flex items-center gap-1.5">
+                  <UIcon
+                    name="i-lucide-calendar"
+                    class="size-4 text-primary shrink-0"
+                  />
+                  <p class="font-medium text-highlighted text-sm">
+                    {{ lead.travelDate }}
+                  </p>
+                </div>
+              </UCard>
+            </div>
+
+            <!-- Original Message -->
+            <UCard>
+              <template #header>
+                <p class="font-semibold text-highlighted">
+                  Original Inquiry Message
+                </p>
+              </template>
+              <p class="text-sm text-default whitespace-pre-line bg-elevated/50 rounded-lg p-3">
+                {{ lead.rawMessage }}
+              </p>
+            </UCard>
+
+            <!-- Reply Draft -->
+            <UCard v-if="lead.aiReplyDraft">
+              <template #header>
+                <div class="flex items-center justify-between">
+                  <p class="font-semibold text-highlighted">
+                    Reply Draft
+                  </p>
+                  <UButton
+                    :icon="copied ? 'i-lucide-check' : 'i-lucide-copy'"
+                    :color="copied ? 'success' : 'neutral'"
+                    variant="ghost"
+                    size="sm"
+                    @click="copy(lead!.aiReplyDraft || '')"
+                  >
+                    {{ copied ? 'Copied!' : 'Copy' }}
+                  </UButton>
+                </div>
+              </template>
+              <p class="text-sm text-default whitespace-pre-line">
+                {{ lead.aiReplyDraft }}
+              </p>
+            </UCard>
+
+            <!-- Follow-up History -->
+            <UCard>
+              <template #header>
+                <div class="flex items-center justify-between">
+                  <p class="font-semibold text-highlighted">
+                    Follow-up History
+                  </p>
+                  <UBadge
+                    v-if="followUps?.length"
+                    color="neutral"
+                    variant="subtle"
+                  >
+                    {{ followUps.length }}
+                  </UBadge>
+                </div>
+              </template>
+
+              <div
+                v-if="followUps?.length"
+                class="space-y-3 mb-4"
+              >
+                <div
+                  v-for="fu in followUps"
+                  :key="fu.id"
+                  class="flex gap-3"
+                >
+                  <div class="shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <UIcon
+                      name="i-lucide-user"
+                      class="size-4 text-primary"
+                    />
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-medium text-highlighted">{{ fu.userName || 'Sales' }}</span>
+                      <span class="text-xs text-muted">{{ timeAgo(fu.createdAt) }}</span>
+                    </div>
+                    <p class="text-sm text-default mt-0.5">
+                      {{ fu.note }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                v-else
+                class="text-sm text-muted mb-4"
+              >
+                No follow-up notes yet.
+              </div>
+
+              <div class="flex gap-2 pt-3 border-t border-default">
+                <UTextarea
+                  v-model="newNote"
+                  placeholder="Write a follow-up note..."
+                  :rows="2"
+                  class="flex-1"
+                  @keydown.ctrl.enter="addFollowUp"
+                />
+                <UButton
+                  icon="i-lucide-send"
+                  :loading="addingNote"
+                  :disabled="!newNote.trim()"
+                  class="self-end"
+                  @click="addFollowUp"
+                />
+              </div>
+              <p class="text-xs text-muted mt-1">
+                Ctrl+Enter to send
+              </p>
+            </UCard>
+          </div>
+
+          <!-- Right column: hotel recommendations -->
+          <div
+            v-if="lead.destination"
+            class="space-y-3"
+          >
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-semibold text-highlighted">
+                  Recommended Hotels
+                </p>
+                <p class="text-xs text-muted mt-0.5">
+                  {{ lead.destination }}
                 </p>
               </div>
+              <UIcon
+                name="i-lucide-hotel"
+                class="size-5 text-muted"
+              />
             </div>
-          </div>
 
-          <div
-            v-else
-            class="text-sm text-muted mb-4"
-          >
-            No follow-up notes yet.
-          </div>
+            <!-- Loading -->
+            <div
+              v-if="hotelsPending"
+              class="space-y-3"
+            >
+              <USkeleton
+                v-for="i in 3"
+                :key="i"
+                class="h-28 rounded-xl"
+              />
+            </div>
 
-          <!-- Form tambah catatan -->
-          <div class="flex gap-2 pt-3 border-t border-default">
-            <UTextarea
-              v-model="newNote"
-              placeholder="Write a follow-up note..."
-              :rows="2"
-              class="flex-1"
-              @keydown.ctrl.enter="addFollowUp"
-            />
-            <UButton
-              icon="i-lucide-send"
-              :loading="addingNote"
-              :disabled="!newNote.trim()"
-              class="self-end"
-              @click="addFollowUp"
-            />
+            <!-- Empty state -->
+            <UCard
+              v-else-if="!hotels?.length"
+              class="text-center py-6"
+            >
+              <UIcon
+                name="i-lucide-building-2"
+                class="size-8 text-muted mx-auto mb-2"
+              />
+              <p class="text-sm text-muted">
+                No hotels found for {{ lead.destination }}
+              </p>
+            </UCard>
+
+            <!-- Hotel cards -->
+            <UCard
+              v-for="hotel in hotels"
+              :key="hotel.id"
+              class="overflow-hidden p-0"
+            >
+              <!-- Image -->
+              <div class="relative h-32 bg-muted overflow-hidden">
+                <img
+                  v-if="hotel.image"
+                  :src="hotel.image"
+                  :alt="hotel.name"
+                  class="w-full h-full object-cover"
+                >
+                <div
+                  v-else
+                  class="w-full h-full flex items-center justify-center"
+                >
+                  <UIcon
+                    name="i-lucide-building-2"
+                    class="size-8 text-muted"
+                  />
+                </div>
+                <UBadge
+                  v-if="hotel.isRefundable"
+                  color="success"
+                  variant="solid"
+                  size="sm"
+                  class="absolute top-2 left-2"
+                >
+                  Free cancellation
+                </UBadge>
+                <UBadge
+                  v-if="hotel.strikethroughDesc"
+                  color="error"
+                  variant="solid"
+                  size="sm"
+                  class="absolute top-2 right-2"
+                >
+                  {{ hotel.strikethroughDesc }}
+                </UBadge>
+              </div>
+
+              <!-- Info -->
+              <div class="p-3 space-y-1.5">
+                <p class="font-semibold text-highlighted text-sm leading-tight line-clamp-1">
+                  {{ hotel.name }}
+                </p>
+
+                <!-- Stars + rating -->
+                <div class="flex items-center gap-2">
+                  <div
+                    v-if="hotel.starRating"
+                    class="flex"
+                  >
+                    <UIcon
+                      v-for="s in Math.floor(hotel.starRating)"
+                      :key="s"
+                      name="i-lucide-star"
+                      class="size-3 text-amber-400 fill-amber-400"
+                    />
+                  </div>
+                  <span class="text-xs text-muted">
+                    <span class="text-highlighted font-medium">{{ (hotel.guestRating / 10).toFixed(1) }}</span>
+                    /10 ({{ hotel.guestRatingCount.toLocaleString() }})
+                  </span>
+                </div>
+
+                <!-- Location -->
+                <p class="text-xs text-muted flex items-center gap-1">
+                  <UIcon
+                    name="i-lucide-map-pin"
+                    class="size-3 shrink-0"
+                  />
+                  {{ hotel.displayName }}
+                </p>
+
+                <!-- Amenities -->
+                <div
+                  v-if="hotel.amenities.length"
+                  class="flex flex-wrap gap-1"
+                >
+                  <UBadge
+                    v-for="amenity in hotel.amenities"
+                    :key="amenity"
+                    color="neutral"
+                    variant="subtle"
+                    size="xs"
+                  >
+                    {{ amenity }}
+                  </UBadge>
+                </div>
+
+                <!-- Price -->
+                <div class="flex items-baseline gap-2 pt-1">
+                  <span class="text-base font-bold text-highlighted">
+                    {{ hotel.currency }} {{ hotel.price.toLocaleString() }}
+                  </span>
+                  <span
+                    v-if="hotel.strikethroughPrice"
+                    class="text-xs text-muted line-through"
+                  >
+                    {{ hotel.currency }} {{ hotel.strikethroughPrice.toLocaleString() }}
+                  </span>
+                  <span class="text-xs text-muted">/night</span>
+                </div>
+              </div>
+            </UCard>
           </div>
-          <p class="text-xs text-muted mt-1">
-            Ctrl+Enter to send
-          </p>
-        </UCard>
+        </div>
       </div>
     </template>
   </UDashboardPanel>
