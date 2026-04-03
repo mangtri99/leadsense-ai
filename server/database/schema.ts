@@ -15,6 +15,7 @@ export const leads = pgTable('leads', {
   source: text('source').default('manual'),
   score: integer('score'),
   status: text('status'), // Hot | Warm | Cold | Nurture
+  pipelineStage: text('pipeline_stage').default('new'), // new | contacted | negotiating | closed_won | closed_lost
   aiAnalysis: text('ai_analysis'),
   aiReplyDraft: text('ai_reply_draft'),
   destination: text('destination'),
@@ -23,6 +24,7 @@ export const leads = pgTable('leads', {
   paxCount: integer('pax_count'),
   email: text('email'),
   phone: text('phone'),
+  lastActivityAt: timestamp('last_activity_at').defaultNow().notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()
 }, table => [
@@ -34,8 +36,10 @@ export const leads = pgTable('leads', {
 export const followUps = pgTable('follow_ups', {
   id: serial('id').primaryKey(),
   leadId: integer('lead_id').notNull().references(() => leads.id, { onDelete: 'cascade' }),
-  userId: integer('user_id').notNull().references(() => users.id),
+  userId: integer('user_id').references(() => users.id), // nullable — customer messages don't have userId
   note: text('note').notNull(),
+  type: text('type').notNull().default('internal'), // 'internal' | 'customer_message'
+  senderName: text('sender_name'), // customer name for customer_message entries
   createdAt: timestamp('created_at').defaultNow().notNull()
 })
 

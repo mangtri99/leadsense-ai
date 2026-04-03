@@ -5,7 +5,7 @@ import type { Lead } from '~/server/database/schema'
 const route = useRoute()
 const toast = useToast()
 
-const { data: lead, error } = await useFetch<Lead>(`/api/leads/${route.params.id}`)
+const { data: lead, error, refresh: refreshLead } = await useFetch<Lead>(`/api/leads/${route.params.id}`)
 
 if (error.value) {
   throw createError({ statusCode: 404, statusMessage: 'Lead not found' })
@@ -13,6 +13,7 @@ if (error.value) {
 
 const { copy, copied } = useClipboard()
 
+// ── AI Score Status ──────────────────────────────────────
 const statusConfig: Record<string, { color: string, icon: string, bg: string, ring: string, badgeColor: 'error' | 'warning' | 'info' | 'secondary' }> = {
   Hot: { color: 'text-red-600 dark:text-red-400', icon: 'i-lucide-flame', bg: 'bg-red-500/10', ring: 'ring-red-500/30', badgeColor: 'error' },
   Warm: { color: 'text-amber-600 dark:text-amber-400', icon: 'i-lucide-sun', bg: 'bg-amber-500/10', ring: 'ring-amber-500/30', badgeColor: 'warning' },
@@ -20,27 +21,64 @@ const statusConfig: Record<string, { color: string, icon: string, bg: string, ri
   Nurture: { color: 'text-violet-600 dark:text-violet-400', icon: 'i-lucide-droplets', bg: 'bg-violet-500/10', ring: 'ring-violet-500/30', badgeColor: 'secondary' }
 }
 
+// ── Pipeline Stage ───────────────────────────────────────
+const pipelineStages = [
+  { value: 'new', label: 'New', icon: 'i-lucide-inbox', color: 'neutral' as const },
+  { value: 'contacted', label: 'Contacted', icon: 'i-lucide-phone', color: 'sky' as const },
+  { value: 'negotiating', label: 'Negotiating', icon: 'i-lucide-handshake', color: 'warning' as const },
+  { value: 'closed_won', label: 'Closed Won', icon: 'i-lucide-check-circle-2', color: 'success' as const },
+  { value: 'closed_lost', label: 'Closed Lost', icon: 'i-lucide-x-circle', color: 'error' as const }
+]
+
+const currentStage = computed(() =>
+  pipelineStages.find(s => s.value === ((lead.value as { pipelineStage?: string })?.pipelineStage || 'new')) ?? pipelineStages[0]!
+)
+
+const updatingStage = ref(false)
+async function updateStage(value: string) {
+  updatingStage.value = true
+  try {
+    await $fetch(`/api/leads/${route.params.id}/stage`, { method: 'PATCH', body: { pipelineStage: value } })
+    await refreshLead()
+    toast.add({ title: `Stage updated to ${pipelineStages.find(s => s.value === value)?.label}`, color: 'success', icon: 'i-lucide-check' })
+  } catch {
+    toast.add({ title: 'Failed to update stage', color: 'error', icon: 'i-lucide-alert-circle' })
+  } finally {
+    updatingStage.value = false
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────
 function formatDate(date: string | Date) {
-  return new Date(date).toLocaleString('en-US', {
-    day: 'numeric', month: 'long', year: 'numeric',
-    hour: '2-digit', minute: '2-digit'
-  })
+  return new Date(date).toLocaleString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 function timeAgo(date: string | Date) {
   const diff = Date.now() - new Date(date).getTime()
   const mins = Math.floor(diff / 60000)
   if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins} minutes ago`
+  if (mins < 60) return `${mins}m ago`
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours} hours ago`
-  return `${Math.floor(hours / 24)} days ago`
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
 }
 
-// Follow-up
+// ── Conversation Timeline ─────────────────────────────────
+interface TimelineEntry {
+  id: number | string
+  type: 'customer_message' | 'internal'
+  note: string
+  createdAt: string | Date
+  userName: string | null
+  senderName: string | null
+  isInitial?: boolean
+}
+
 interface FollowUp {
   id: number
   note: string
+  type: string
+  senderName: string | null
   createdAt: string
   userName: string | null
 }
@@ -49,6 +87,32 @@ const { data: followUps, refresh: refreshFollowUps } = await useFetch<FollowUp[]
   `/api/leads/${route.params.id}/follow-ups`
 )
 
+const timelineEntries = computed<TimelineEntry[]>(() => {
+  const entries: TimelineEntry[] = []
+  if (lead.value) {
+    entries.push({
+      id: 'initial',
+      type: 'customer_message',
+      note: lead.value.rawMessage,
+      createdAt: lead.value.createdAt,
+      userName: null,
+      senderName: lead.value.name,
+      isInitial: true
+    })
+  }
+  followUps.value?.forEach(fu => entries.push({
+    id: fu.id,
+    type: fu.type as 'customer_message' | 'internal',
+    note: fu.note,
+    createdAt: fu.createdAt,
+    userName: fu.userName,
+    senderName: fu.senderName
+  }))
+  return entries
+})
+
+// ── Add Note ─────────────────────────────────────────────
+const activeInput = ref<'note' | 'reply'>('note')
 const newNote = ref('')
 const addingNote = ref(false)
 
@@ -58,11 +122,11 @@ async function addFollowUp() {
   try {
     await $fetch(`/api/leads/${route.params.id}/follow-ups`, {
       method: 'POST',
-      body: { note: newNote.value.trim() }
+      body: { note: newNote.value.trim(), type: 'internal' }
     })
     newNote.value = ''
     await refreshFollowUps()
-    toast.add({ title: 'Note added successfully', color: 'success', icon: 'i-lucide-check-circle' })
+    toast.add({ title: 'Note added', color: 'success', icon: 'i-lucide-check-circle' })
   } catch {
     toast.add({ title: 'Failed to add note', color: 'error', icon: 'i-lucide-circle-alert' })
   } finally {
@@ -70,7 +134,44 @@ async function addFollowUp() {
   }
 }
 
-// Hotel recommendations
+// ── Log Customer Reply ────────────────────────────────────
+const replyMessage = ref('')
+const reanalyze = ref(true)
+const submittingReply = ref(false)
+
+interface ReplyAnalysis {
+  score: number
+  status: string
+  previousScore: number | null
+  previousStatus: string | null
+  scoreDiff: number
+  statusChanged: boolean
+  replyDraft: string
+}
+const lastAnalysis = ref<ReplyAnalysis | null>(null)
+
+async function submitReply() {
+  if (!replyMessage.value.trim()) return
+  submittingReply.value = true
+  lastAnalysis.value = null
+  try {
+    const result = await $fetch<{ followUp: FollowUp, analysis: ReplyAnalysis | null }>(
+      `/api/leads/${route.params.id}/analyze-reply`,
+      { method: 'POST', body: { message: replyMessage.value.trim(), reanalyze: reanalyze.value } }
+    )
+    replyMessage.value = ''
+    lastAnalysis.value = result.analysis
+    await refreshFollowUps()
+    await refreshLead()
+    toast.add({ title: 'Customer reply logged', color: 'success', icon: 'i-lucide-check-circle' })
+  } catch {
+    toast.add({ title: 'Failed to log reply', color: 'error', icon: 'i-lucide-circle-alert' })
+  } finally {
+    submittingReply.value = false
+  }
+}
+
+// ── Hotel Recommendations ─────────────────────────────────
 interface Hotel {
   id: string
   name: string
@@ -82,7 +183,6 @@ interface Hotel {
   strikethroughDesc: string | null
   currency: string
   image: string | null
-  propertyType: string
   city: string
   country: string
   displayName: string
@@ -137,11 +237,11 @@ const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/h
         class="p-4 lg:p-6"
       >
         <div class="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6 max-w-7xl mx-auto items-start">
-          <!-- Left column: lead detail -->
+          <!-- ── Left column ── -->
           <div class="space-y-6">
-            <!-- Score header -->
+            <!-- Score + Pipeline Stage -->
             <UCard>
-              <div class="flex items-center gap-4">
+              <div class="flex items-start gap-4">
                 <div
                   class="w-20 h-20 rounded-full flex flex-col items-center justify-center text-center ring-4 shrink-0"
                   :class="[statusConfig[lead.status!]?.bg, statusConfig[lead.status!]?.ring]"
@@ -157,26 +257,51 @@ const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/h
                     :class="statusConfig[lead.status!]?.color"
                   >/ 100</span>
                 </div>
-                <div class="flex-1">
-                  <div class="flex items-center gap-2 mb-1">
-                    <UIcon
-                      v-if="lead.status"
-                      :name="statusConfig[lead.status]?.icon"
-                      :class="['size-5', statusConfig[lead.status]?.color]"
-                    />
-                    <span
-                      class="text-xl font-bold"
-                      :class="statusConfig[lead.status!]?.color"
+
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between gap-2 flex-wrap mb-1">
+                    <div class="flex items-center gap-2">
+                      <UIcon
+                        v-if="lead.status"
+                        :name="statusConfig[lead.status]?.icon"
+                        :class="['size-5', statusConfig[lead.status]?.color]"
+                      />
+                      <span
+                        class="text-xl font-bold"
+                        :class="statusConfig[lead.status!]?.color"
+                      >
+                        {{ lead.status || 'Not analyzed' }}
+                      </span>
+                    </div>
+
+                    <!-- Pipeline Stage Selector -->
+                    <UDropdownMenu
+                      :items="pipelineStages.map(s => ({
+                        label: s.label,
+                        icon: s.icon,
+                        onSelect: () => updateStage(s.value)
+                      }))"
                     >
-                      {{ lead.status || 'Not analyzed yet' }}
-                    </span>
+                      <UButton
+                        :icon="currentStage.icon"
+                        :color="currentStage.color"
+                        variant="subtle"
+                        size="sm"
+                        :loading="updatingStage"
+                        trailing-icon="i-lucide-chevron-down"
+                      >
+                        {{ currentStage.label }}
+                      </UButton>
+                    </UDropdownMenu>
                   </div>
+
                   <p
                     v-if="lead.aiAnalysis"
                     class="text-sm text-muted"
                   >
                     {{ lead.aiAnalysis }}
                   </p>
+
                   <p class="text-xs text-muted mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span>
                       <UIcon
@@ -226,7 +351,7 @@ const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/h
                     name="i-lucide-map-pin"
                     class="size-4 text-primary shrink-0"
                   />
-                  <p class="font-medium text-highlighted text-sm">
+                  <p class="font-medium text-highlighted text-sm truncate">
                     {{ lead.destination }}
                   </p>
                 </div>
@@ -240,7 +365,7 @@ const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/h
                     name="i-lucide-wallet"
                     class="size-4 text-primary shrink-0"
                   />
-                  <p class="font-medium text-highlighted text-sm">
+                  <p class="font-medium text-highlighted text-sm truncate">
                     {{ lead.budget }}
                   </p>
                 </div>
@@ -275,18 +400,6 @@ const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/h
               </UCard>
             </div>
 
-            <!-- Original Message -->
-            <UCard>
-              <template #header>
-                <p class="font-semibold text-highlighted">
-                  Original Inquiry Message
-                </p>
-              </template>
-              <p class="text-sm text-default whitespace-pre-line bg-elevated/50 rounded-lg p-3">
-                {{ lead.rawMessage }}
-              </p>
-            </UCard>
-
             <!-- Reply Draft -->
             <UCard v-if="lead.aiReplyDraft">
               <template #header>
@@ -310,80 +423,201 @@ const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/h
               </p>
             </UCard>
 
-            <!-- Follow-up History -->
+            <!-- Conversation Timeline -->
             <UCard>
               <template #header>
                 <div class="flex items-center justify-between">
                   <p class="font-semibold text-highlighted">
-                    Follow-up History
+                    Conversation
                   </p>
                   <UBadge
-                    v-if="followUps?.length"
                     color="neutral"
                     variant="subtle"
                   >
-                    {{ followUps.length }}
+                    {{ timelineEntries.length }}
                   </UBadge>
                 </div>
               </template>
 
-              <div
-                v-if="followUps?.length"
-                class="space-y-3 mb-4"
-              >
+              <!-- Timeline entries -->
+              <div class="space-y-4 mb-4">
                 <div
-                  v-for="fu in followUps"
-                  :key="fu.id"
+                  v-for="entry in timelineEntries"
+                  :key="entry.id"
                   class="flex gap-3"
                 >
-                  <div class="shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <!-- Avatar -->
+                  <div
+                    class="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                    :class="entry.type === 'customer_message'
+                      ? 'bg-primary/15 text-primary'
+                      : 'bg-elevated text-muted'"
+                  >
+                    <span v-if="entry.type === 'customer_message'">
+                      {{ (entry.senderName || 'C').charAt(0).toUpperCase() }}
+                    </span>
                     <UIcon
-                      name="i-lucide-user"
-                      class="size-4 text-primary"
+                      v-else
+                      name="i-lucide-lock"
+                      class="size-3.5"
                     />
                   </div>
+
+                  <!-- Bubble -->
                   <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2">
-                      <span class="text-sm font-medium text-highlighted">{{ fu.userName || 'Sales' }}</span>
-                      <span class="text-xs text-muted">{{ timeAgo(fu.createdAt) }}</span>
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="text-sm font-medium text-highlighted">
+                        {{ entry.type === 'customer_message'
+                          ? (entry.senderName || lead?.name)
+                          : (entry.userName || 'Sales') }}
+                      </span>
+                      <UBadge
+                        v-if="entry.type === 'internal'"
+                        color="neutral"
+                        variant="subtle"
+                        size="xs"
+                      >
+                        Internal
+                      </UBadge>
+                      <UBadge
+                        v-if="entry.isInitial"
+                        color="primary"
+                        variant="subtle"
+                        size="xs"
+                      >
+                        Initial inquiry
+                      </UBadge>
+                      <span class="text-xs text-muted ml-auto">{{ timeAgo(entry.createdAt) }}</span>
                     </div>
-                    <p class="text-sm text-default mt-0.5">
-                      {{ fu.note }}
-                    </p>
+                    <div
+                      class="text-sm rounded-xl px-3 py-2 whitespace-pre-line"
+                      :class="entry.type === 'customer_message'
+                        ? 'bg-primary/8 text-default'
+                        : 'bg-elevated text-default'"
+                    >
+                      {{ entry.note }}
+                    </div>
                   </div>
                 </div>
               </div>
 
+              <!-- AI re-analysis result -->
               <div
-                v-else
-                class="text-sm text-muted mb-4"
+                v-if="lastAnalysis"
+                class="mb-4 rounded-xl border border-default p-3 space-y-2 bg-elevated/50"
               >
-                No follow-up notes yet.
+                <div class="flex items-center gap-2 flex-wrap">
+                  <UIcon
+                    name="i-lucide-brain-circuit"
+                    class="size-4 text-primary"
+                  />
+                  <span class="text-sm font-medium text-highlighted">AI Re-analysis</span>
+                  <UBadge
+                    :color="lastAnalysis.scoreDiff > 0 ? 'success' : lastAnalysis.scoreDiff < 0 ? 'warning' : 'neutral'"
+                    variant="subtle"
+                    size="sm"
+                  >
+                    {{ lastAnalysis.scoreDiff > 0 ? '↑' : lastAnalysis.scoreDiff < 0 ? '↓' : '=' }}
+                    {{ lastAnalysis.previousScore }} → {{ lastAnalysis.score }}
+                  </UBadge>
+                  <UBadge
+                    v-if="lastAnalysis.statusChanged"
+                    color="primary"
+                    variant="subtle"
+                    size="sm"
+                  >
+                    {{ lastAnalysis.previousStatus }} → {{ lastAnalysis.status }}
+                  </UBadge>
+                </div>
+                <p class="text-xs text-muted">
+                  New reply draft updated above.
+                </p>
               </div>
 
-              <div class="flex gap-2 pt-3 border-t border-default">
-                <UTextarea
-                  v-model="newNote"
-                  placeholder="Write a follow-up note..."
-                  :rows="2"
-                  class="flex-1"
-                  @keydown.ctrl.enter="addFollowUp"
-                />
-                <UButton
-                  icon="i-lucide-send"
-                  :loading="addingNote"
-                  :disabled="!newNote.trim()"
-                  class="self-end"
-                  @click="addFollowUp"
-                />
+              <!-- Input area -->
+              <div class="border-t border-default pt-4 space-y-3">
+                <!-- Toggle -->
+                <div class="flex gap-2">
+                  <UButton
+                    size="sm"
+                    :variant="activeInput === 'note' ? 'solid' : 'ghost'"
+                    :color="activeInput === 'note' ? 'neutral' : 'neutral'"
+                    icon="i-lucide-lock"
+                    @click="activeInput = 'note'; lastAnalysis = null"
+                  >
+                    Add Note
+                  </UButton>
+                  <UButton
+                    size="sm"
+                    :variant="activeInput === 'reply' ? 'solid' : 'ghost'"
+                    :color="activeInput === 'reply' ? 'primary' : 'neutral'"
+                    icon="i-lucide-message-circle"
+                    @click="activeInput = 'reply'; lastAnalysis = null"
+                  >
+                    Log Customer Reply
+                  </UButton>
+                </div>
+
+                <!-- Add Note form -->
+                <div
+                  v-if="activeInput === 'note'"
+                  class="flex gap-2"
+                >
+                  <UTextarea
+                    v-model="newNote"
+                    placeholder="Write an internal note..."
+                    :rows="2"
+                    class="flex-1"
+                    @keydown.ctrl.enter="addFollowUp"
+                  />
+                  <UButton
+                    icon="i-lucide-send"
+                    :loading="addingNote"
+                    :disabled="!newNote.trim()"
+                    class="self-end"
+                    @click="addFollowUp"
+                  />
+                </div>
+
+                <!-- Log Customer Reply form -->
+                <div
+                  v-else
+                  class="space-y-2"
+                >
+                  <UTextarea
+                    v-model="replyMessage"
+                    placeholder="Paste customer's reply here..."
+                    :rows="3"
+                    @keydown.ctrl.enter="submitReply"
+                  />
+                  <div class="flex items-center justify-between">
+                    <label class="flex items-center gap-2 text-sm text-muted cursor-pointer">
+                      <UToggle
+                        v-model="reanalyze"
+                        size="sm"
+                      />
+                      Re-analyze with AI
+                    </label>
+                    <UButton
+                      :loading="submittingReply"
+                      :disabled="!replyMessage.trim()"
+                      icon="i-lucide-brain-circuit"
+                      size="sm"
+                      @click="submitReply"
+                    >
+                      {{ reanalyze ? 'Log & Analyze' : 'Log Reply' }}
+                    </UButton>
+                  </div>
+                </div>
+
+                <p class="text-xs text-muted">
+                  Ctrl+Enter to submit
+                </p>
               </div>
-              <p class="text-xs text-muted mt-1">
-                Ctrl+Enter to send
-              </p>
             </UCard>
           </div>
 
-          <!-- Right column: hotel recommendations -->
+          <!-- ── Right column: Hotel Recommendations ── -->
           <div
             v-if="lead.destination"
             class="space-y-3"
@@ -403,7 +637,6 @@ const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/h
               />
             </div>
 
-            <!-- Loading -->
             <div
               v-if="hotelsPending"
               class="space-y-3"
@@ -415,7 +648,6 @@ const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/h
               />
             </div>
 
-            <!-- Empty state -->
             <UCard
               v-else-if="!hotels?.length"
               class="text-center py-6"
@@ -429,13 +661,11 @@ const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/h
               </p>
             </UCard>
 
-            <!-- Hotel cards -->
             <UCard
               v-for="hotel in hotels"
               :key="hotel.id"
               class="overflow-hidden p-0"
             >
-              <!-- Image -->
               <div class="relative h-32 bg-muted overflow-hidden">
                 <img
                   v-if="hotel.image"
@@ -472,13 +702,10 @@ const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/h
                 </UBadge>
               </div>
 
-              <!-- Info -->
               <div class="p-3 space-y-1.5">
                 <p class="font-semibold text-highlighted text-sm leading-tight line-clamp-1">
                   {{ hotel.name }}
                 </p>
-
-                <!-- Stars + rating -->
                 <div class="flex items-center gap-2">
                   <div
                     v-if="hotel.starRating"
@@ -496,8 +723,6 @@ const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/h
                     /10 ({{ hotel.guestRatingCount.toLocaleString() }})
                   </span>
                 </div>
-
-                <!-- Location -->
                 <p class="text-xs text-muted flex items-center gap-1">
                   <UIcon
                     name="i-lucide-map-pin"
@@ -505,8 +730,6 @@ const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/h
                   />
                   {{ hotel.displayName }}
                 </p>
-
-                <!-- Amenities -->
                 <div
                   v-if="hotel.amenities.length"
                   class="flex flex-wrap gap-1"
@@ -521,8 +744,6 @@ const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/h
                     {{ amenity }}
                   </UBadge>
                 </div>
-
-                <!-- Price -->
                 <div class="flex items-baseline gap-2 pt-1">
                   <span class="text-base font-bold text-highlighted">
                     {{ hotel.currency }} {{ hotel.price.toLocaleString() }}

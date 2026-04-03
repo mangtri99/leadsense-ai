@@ -13,6 +13,8 @@ export default defineEventHandler(async (event) => {
     .select({
       id: followUps.id,
       note: followUps.note,
+      type: followUps.type,
+      senderName: followUps.senderName,
       createdAt: followUps.createdAt,
       userName: users.name
     })

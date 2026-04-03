@@ -49,6 +49,14 @@ const statusConfig: Record<string, { color: string, icon: string, badge: 'error'
   Nurture: { color: 'text-violet-500', icon: 'i-lucide-droplets', badge: 'secondary' }
 }
 
+const pipelineConfig: Record<string, { label: string, icon: string }> = {
+  new: { label: 'New', icon: 'i-lucide-inbox' },
+  contacted: { label: 'Contacted', icon: 'i-lucide-phone' },
+  negotiating: { label: 'Negotiating', icon: 'i-lucide-handshake' },
+  closed_won: { label: 'Closed Won', icon: 'i-lucide-check-circle-2' },
+  closed_lost: { label: 'Closed Lost', icon: 'i-lucide-x-circle' }
+}
+
 function timeAgo(date: string | Date) {
   const diff = Date.now() - new Date(date).getTime()
   const mins = Math.floor(diff / 60000)
@@ -205,6 +213,18 @@ function exportCSV() {
                       size="sm"
                     >
                       {{ lead.source }}
+                    </UBadge>
+                    <UBadge
+                      v-if="(lead as any).pipelineStage && (lead as any).pipelineStage !== 'new'"
+                      color="neutral"
+                      variant="subtle"
+                      size="sm"
+                    >
+                      <UIcon
+                        :name="pipelineConfig[(lead as any).pipelineStage]?.icon || 'i-lucide-inbox'"
+                        class="size-3 mr-1"
+                      />
+                      {{ pipelineConfig[(lead as any).pipelineStage]?.label }}
                     </UBadge>
                   </div>
                   <p class="text-sm text-muted truncate mt-0.5">
