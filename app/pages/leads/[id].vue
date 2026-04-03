@@ -8,7 +8,7 @@ const toast = useToast()
 const { data: lead, error } = await useFetch<Lead>(`/api/leads/${route.params.id}`)
 
 if (error.value) {
-  throw createError({ statusCode: 404, statusMessage: 'Lead tidak ditemukan' })
+  throw createError({ statusCode: 404, statusMessage: 'Lead not found' })
 }
 
 const { copy, copied } = useClipboard()
@@ -21,7 +21,7 @@ const statusConfig: Record<string, { color: string, icon: string, bg: string, ri
 }
 
 function formatDate(date: string | Date) {
-  return new Date(date).toLocaleString('id-ID', {
+  return new Date(date).toLocaleString('en-US', {
     day: 'numeric', month: 'long', year: 'numeric',
     hour: '2-digit', minute: '2-digit'
   })
@@ -30,11 +30,11 @@ function formatDate(date: string | Date) {
 function timeAgo(date: string | Date) {
   const diff = Date.now() - new Date(date).getTime()
   const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'baru saja'
-  if (mins < 60) return `${mins} menit lalu`
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins} minutes ago`
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours} jam lalu`
-  return `${Math.floor(hours / 24)} hari lalu`
+  if (hours < 24) return `${hours} hours ago`
+  return `${Math.floor(hours / 24)} days ago`
 }
 
 // Follow-up
@@ -62,9 +62,9 @@ async function addFollowUp() {
     })
     newNote.value = ''
     await refreshFollowUps()
-    toast.add({ title: 'Catatan berhasil ditambahkan', color: 'success', icon: 'i-lucide-check-circle' })
+    toast.add({ title: 'Note added successfully', color: 'success', icon: 'i-lucide-check-circle' })
   } catch {
-    toast.add({ title: 'Gagal menambahkan catatan', color: 'error', icon: 'i-lucide-circle-alert' })
+    toast.add({ title: 'Failed to add note', color: 'error', icon: 'i-lucide-circle-alert' })
   } finally {
     addingNote.value = false
   }
@@ -84,7 +84,7 @@ async function addFollowUp() {
             variant="ghost"
             size="sm"
           >
-            Kembali
+            Back
           </UButton>
         </template>
         <template #title>
@@ -140,7 +140,7 @@ async function addFollowUp() {
                   class="text-xl font-bold"
                   :class="statusConfig[lead.status!]?.color"
                 >
-                  {{ lead.status || 'Belum dianalisis' }}
+                  {{ lead.status || 'Not analyzed yet' }}
                 </span>
               </div>
               <p
@@ -173,7 +173,7 @@ async function addFollowUp() {
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <UCard v-if="lead.destination">
             <p class="text-xs text-muted mb-1">
-              Destinasi
+              Destination
             </p>
             <div class="flex items-center gap-1.5">
               <UIcon
@@ -201,7 +201,7 @@ async function addFollowUp() {
           </UCard>
           <UCard v-if="lead.paxCount">
             <p class="text-xs text-muted mb-1">
-              Jumlah Orang
+              Pax Count
             </p>
             <div class="flex items-center gap-1.5">
               <UIcon
@@ -209,13 +209,13 @@ async function addFollowUp() {
                 class="size-4 text-primary shrink-0"
               />
               <p class="font-medium text-highlighted text-sm">
-                {{ lead.paxCount }} orang
+                {{ lead.paxCount }} pax
               </p>
             </div>
           </UCard>
           <UCard v-if="lead.travelDate">
             <p class="text-xs text-muted mb-1">
-              Tanggal Perjalanan
+              Travel Date
             </p>
             <div class="flex items-center gap-1.5">
               <UIcon
@@ -233,7 +233,7 @@ async function addFollowUp() {
         <UCard>
           <template #header>
             <p class="font-semibold text-highlighted">
-              Pesan Inquiry Asli
+              Original Inquiry Message
             </p>
           </template>
           <p class="text-sm text-default whitespace-pre-line bg-elevated/50 rounded-lg p-3">
@@ -246,7 +246,7 @@ async function addFollowUp() {
           <template #header>
             <div class="flex items-center justify-between">
               <p class="font-semibold text-highlighted">
-                Draft Balasan
+                Reply Draft
               </p>
               <UButton
                 :icon="copied ? 'i-lucide-check' : 'i-lucide-copy'"
@@ -255,7 +255,7 @@ async function addFollowUp() {
                 size="sm"
                 @click="copy(lead!.aiReplyDraft || '')"
               >
-                {{ copied ? 'Tersalin!' : 'Salin' }}
+                {{ copied ? 'Copied!' : 'Copy' }}
               </UButton>
             </div>
           </template>
@@ -269,7 +269,7 @@ async function addFollowUp() {
           <template #header>
             <div class="flex items-center justify-between">
               <p class="font-semibold text-highlighted">
-                Histori Follow-up
+                Follow-up History
               </p>
               <UBadge
                 v-if="followUps?.length"
@@ -313,14 +313,14 @@ async function addFollowUp() {
             v-else
             class="text-sm text-muted mb-4"
           >
-            Belum ada catatan follow-up.
+            No follow-up notes yet.
           </div>
 
           <!-- Form tambah catatan -->
           <div class="flex gap-2 pt-3 border-t border-default">
             <UTextarea
               v-model="newNote"
-              placeholder="Tulis catatan follow-up..."
+              placeholder="Write a follow-up note..."
               :rows="2"
               class="flex-1"
               @keydown.ctrl.enter="addFollowUp"
@@ -334,7 +334,7 @@ async function addFollowUp() {
             />
           </div>
           <p class="text-xs text-muted mt-1">
-            Ctrl+Enter untuk kirim
+            Ctrl+Enter to send
           </p>
         </UCard>
       </div>

@@ -27,7 +27,7 @@ async function onSubmit() {
     await navigateTo('/')
   } catch (err) {
     const e = err as { data?: { message?: string } }
-    error.value = e?.data?.message || 'Email atau password salah.'
+    error.value = e?.data?.message || 'Incorrect email or password.'
   } finally {
     loading.value = false
   }
@@ -42,7 +42,7 @@ async function onSubmit() {
           LeadSense AI
         </h1>
         <p class="text-sm text-muted mt-1">
-          Login ke dashboard sales Anda
+          Log in to your sales dashboard
         </p>
       </div>
 

@@ -119,9 +119,9 @@ export async function analyzeLeadWithAI(rawMessage: string): Promise<LeadAnalysi
     text = message.content[0].type === 'text' ? message.content[0].text : ''
   } catch (err) {
     if ((err as Error)?.message === 'AI_TIMEOUT') {
-      throw createError({ statusCode: 504, message: 'Analisis AI memerlukan waktu terlalu lama. Silakan coba lagi.' })
+      throw createError({ statusCode: 504, message: 'AI analysis took too long. Please try again.' })
     }
-    throw createError({ statusCode: 502, message: 'Gagal menghubungi layanan AI. Silakan coba lagi.' })
+    throw createError({ statusCode: 502, message: 'Failed to reach the AI service. Please try again.' })
   }
 
   try {

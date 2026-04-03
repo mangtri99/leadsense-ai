@@ -12,16 +12,16 @@ function handleError() {
 }
 
 const title = computed(() => {
-  if (props.error.statusCode === 404) return 'Halaman Tidak Ditemukan'
-  if (props.error.statusCode === 403) return 'Akses Ditolak'
-  if (props.error.statusCode === 401) return 'Belum Login'
-  return 'Terjadi Kesalahan'
+  if (props.error.statusCode === 404) return 'Page Not Found'
+  if (props.error.statusCode === 403) return 'Access Denied'
+  if (props.error.statusCode === 401) return 'Not Logged In'
+  return 'An Error Occurred'
 })
 
 const description = computed(() => {
-  if (props.error.statusCode === 404) return 'Halaman yang Anda cari tidak tersedia atau sudah dipindahkan.'
-  if (props.error.statusCode === 401) return 'Silakan login terlebih dahulu untuk mengakses halaman ini.'
-  return props.error.statusMessage || props.error.message || 'Terjadi kesalahan yang tidak terduga.'
+  if (props.error.statusCode === 404) return 'The page you are looking for is not available or has been moved.'
+  if (props.error.statusCode === 401) return 'Please log in to access this page.'
+  return props.error.statusMessage || props.error.message || 'An unexpected error occurred.'
 })
 </script>
 
@@ -43,7 +43,7 @@ const description = computed(() => {
             icon="i-lucide-house"
             @click="handleError"
           >
-            Kembali ke Dashboard
+            Back to Dashboard
           </UButton>
           <UButton
             v-if="error.statusCode === 401"

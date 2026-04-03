@@ -6,8 +6,8 @@ import type { Lead } from '~/server/database/schema'
 const toast = useToast()
 
 const schema = z.object({
-  name: z.string().min(2, 'Nama minimal 2 karakter').max(100, 'Nama maksimal 100 karakter'),
-  rawMessage: z.string().min(10, 'Pesan minimal 10 karakter').max(2000, 'Pesan maksimal 2000 karakter'),
+  name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name must be at most 100 characters'),
+  rawMessage: z.string().min(10, 'Message must be at least 10 characters').max(2000, 'Message must be at most 2000 characters'),
   source: z.string()
 })
 
@@ -39,12 +39,12 @@ async function onSubmit() {
       body: state
     })
     result.value = data
-    toast.add({ title: 'Analisis selesai!', color: 'success', icon: 'i-lucide-check-circle' })
+    toast.add({ title: 'Analysis complete!', color: 'success', icon: 'i-lucide-check-circle' })
   } catch (err) {
     const e = err as { data?: { message?: string }, status?: number }
-    const message = e?.data?.message || 'Terjadi kesalahan. Silakan coba lagi.'
+    const message = e?.data?.message || 'An error occurred. Please try again.'
     toast.add({
-      title: e?.status === 429 ? 'Terlalu banyak permintaan' : 'Gagal menganalisis lead',
+      title: e?.status === 429 ? 'Too many requests' : 'Failed to analyze lead',
       description: message,
       color: 'error',
       icon: 'i-lucide-circle-alert'
@@ -67,7 +67,7 @@ const statusConfig: Record<string, { color: string, icon: string, bg: string, ri
 <template>
   <UDashboardPanel id="leads-new">
     <template #header>
-      <UDashboardNavbar title="Input Lead Baru">
+      <UDashboardNavbar title="New Lead">
         <template #leading>
           <UDashboardSidebarCollapse />
         </template>
@@ -80,10 +80,10 @@ const statusConfig: Record<string, { color: string, icon: string, bg: string, ri
         <UCard>
           <template #header>
             <p class="font-semibold text-highlighted">
-              Data Lead
+              Lead Data
             </p>
             <p class="text-sm text-muted">
-              Isi pesan inquiry dari calon pelanggan untuk dianalisis oleh AI
+              Enter the inquiry message from the prospective customer to be analyzed by AI
             </p>
           </template>
 
@@ -95,19 +95,19 @@ const statusConfig: Record<string, { color: string, icon: string, bg: string, ri
           >
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <UFormField
-                label="Nama Lead"
+                label="Lead Name"
                 name="name"
                 required
               >
                 <UInput
                   v-model="state.name"
-                  placeholder="contoh: Budi Santoso"
+                  placeholder="e.g. John Smith"
                   class="w-full"
                 />
               </UFormField>
 
               <UFormField
-                label="Sumber Lead"
+                label="Lead Source"
                 name="source"
               >
                 <USelect
@@ -121,13 +121,13 @@ const statusConfig: Record<string, { color: string, icon: string, bg: string, ri
             </div>
 
             <UFormField
-              label="Pesan Inquiry"
+              label="Inquiry Message"
               name="rawMessage"
               required
             >
               <UTextarea
                 v-model="state.rawMessage"
-                placeholder="Tempel pesan asli dari calon pelanggan di sini..."
+                placeholder="Paste the original message from the prospective customer here..."
                 :rows="5"
                 class="w-full"
               />
@@ -140,7 +140,7 @@ const statusConfig: Record<string, { color: string, icon: string, bg: string, ri
                 :loading="loading"
                 :disabled="!state.name.trim() || !state.rawMessage.trim()"
               >
-                {{ loading ? 'Menganalisis...' : 'Analisis dengan AI' }}
+                {{ loading ? 'Analyzing...' : 'Analyze with AI' }}
               </UButton>
               <UButton
                 v-if="result"
@@ -149,7 +149,7 @@ const statusConfig: Record<string, { color: string, icon: string, bg: string, ri
                 variant="outline"
                 icon="i-lucide-external-link"
               >
-                Lihat Detail
+                View Details
               </UButton>
             </div>
           </UForm>
@@ -165,10 +165,10 @@ const statusConfig: Record<string, { color: string, icon: string, bg: string, ri
               />
               <div>
                 <p class="font-medium text-highlighted">
-                  AI sedang menganalisis...
+                  AI is analyzing...
                 </p>
                 <p class="text-sm text-muted">
-                  Biasanya selesai dalam 3–5 detik
+                  Usually done in 3–5 seconds
                 </p>
               </div>
             </div>
@@ -218,7 +218,7 @@ const statusConfig: Record<string, { color: string, icon: string, bg: string, ri
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <UCard v-if="result.destination">
               <p class="text-xs text-muted mb-1">
-                Destinasi
+                Destination
               </p>
               <div class="flex items-center gap-1.5">
                 <UIcon
@@ -246,7 +246,7 @@ const statusConfig: Record<string, { color: string, icon: string, bg: string, ri
             </UCard>
             <UCard v-if="result.paxCount">
               <p class="text-xs text-muted mb-1">
-                Jumlah Orang
+                Pax Count
               </p>
               <div class="flex items-center gap-1.5">
                 <UIcon
@@ -254,13 +254,13 @@ const statusConfig: Record<string, { color: string, icon: string, bg: string, ri
                   class="size-4 text-primary shrink-0"
                 />
                 <p class="font-medium text-highlighted text-sm">
-                  {{ result.paxCount }} orang
+                  {{ result.paxCount }} pax
                 </p>
               </div>
             </UCard>
             <UCard v-if="result.travelDate">
               <p class="text-xs text-muted mb-1">
-                Tanggal Perjalanan
+                Travel Date
               </p>
               <div class="flex items-center gap-1.5">
                 <UIcon
@@ -279,7 +279,7 @@ const statusConfig: Record<string, { color: string, icon: string, bg: string, ri
             <template #header>
               <div class="flex items-center justify-between">
                 <p class="font-semibold text-highlighted">
-                  Draft Balasan
+                  Reply Draft
                 </p>
                 <UButton
                   :icon="copied ? 'i-lucide-check' : 'i-lucide-copy'"
@@ -288,7 +288,7 @@ const statusConfig: Record<string, { color: string, icon: string, bg: string, ri
                   size="sm"
                   @click="copy(result!.aiReplyDraft || '')"
                 >
-                  {{ copied ? 'Tersalin!' : 'Salin' }}
+                  {{ copied ? 'Copied!' : 'Copy' }}
                 </UButton>
               </div>
             </template>
@@ -301,7 +301,7 @@ const statusConfig: Record<string, { color: string, icon: string, bg: string, ri
           <UCard v-if="result.recommendations && result.recommendations.length">
             <template #header>
               <p class="font-semibold text-highlighted">
-                Rekomendasi Paket Wisata
+                Tour Package Recommendations
               </p>
             </template>
             <div class="flex flex-wrap gap-2">

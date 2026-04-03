@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   await requireUserSession(event)
 
   const leadId = Number(getRouterParam(event, 'id'))
-  if (!leadId) throw createError({ statusCode: 400, message: 'ID tidak valid.' })
+  if (!leadId) throw createError({ statusCode: 400, message: 'Invalid ID.' })
 
   const db = useDb()
 

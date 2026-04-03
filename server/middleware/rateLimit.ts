@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
     const retryAfter = Math.ceil((raw.resetAt - now) / 1000)
     throw createError({
       statusCode: 429,
-      message: `Terlalu banyak permintaan. Coba lagi dalam ${retryAfter} detik.`
+      message: `Too many requests. Please try again in ${retryAfter} seconds.`
     })
   }
 

@@ -15,7 +15,7 @@ const { data: leads, pending, refresh } = await useFetch<Lead[]>('/api/leads', {
 })
 
 const statusOptions = [
-  { label: 'Semua', value: '' },
+  { label: 'All', value: '' },
   { label: 'Hot', value: 'Hot' },
   { label: 'Warm', value: 'Warm' },
   { label: 'Cold', value: 'Cold' },
@@ -32,11 +32,11 @@ const statusConfig: Record<string, { color: string, icon: string, badge: 'error'
 function timeAgo(date: string | Date) {
   const diff = Date.now() - new Date(date).getTime()
   const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'baru saja'
-  if (mins < 60) return `${mins} menit lalu`
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins} minutes ago`
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours} jam lalu`
-  return `${Math.floor(hours / 24)} hari lalu`
+  if (hours < 24) return `${hours} hours ago`
+  return `${Math.floor(hours / 24)} days ago`
 }
 
 function exportCSV() {
@@ -61,7 +61,7 @@ function exportCSV() {
             icon="i-lucide-plus"
             size="md"
           >
-            Input Lead
+            New Lead
           </UButton>
         </template>
       </UDashboardNavbar>
@@ -117,17 +117,17 @@ function exportCSV() {
             class="size-12 text-muted mb-4"
           />
           <p class="text-highlighted font-medium">
-            Belum ada lead
+            No leads yet
           </p>
           <p class="text-muted text-sm mt-1">
-            {{ activeStatus ? `Tidak ada lead dengan status ${activeStatus}` : 'Mulai dengan input lead pertama Anda' }}
+            {{ activeStatus ? `No leads with status ${activeStatus}` : 'Start by adding your first lead' }}
           </p>
           <UButton
             to="/leads/new"
             icon="i-lucide-plus"
             class="mt-4"
           >
-            Input Lead Baru
+            New Lead
           </UButton>
         </div>
 
@@ -203,7 +203,7 @@ function exportCSV() {
                       <UIcon
                         name="i-lucide-users"
                         class="size-3 inline mr-0.5"
-                      />{{ lead.paxCount }} orang
+                      />{{ lead.paxCount }} pax
                     </span>
                     <span v-if="lead.travelDate">
                       <UIcon

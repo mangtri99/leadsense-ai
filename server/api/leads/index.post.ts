@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
   const parsed = bodySchema.safeParse(body)
 
   if (!parsed.success) {
-    const message = parsed.error.issues[0]?.message || 'Input tidak valid.'
+    const message = parsed.error.issues[0]?.message || 'Invalid input.'
     throw createError({ statusCode: 400, message })
   }
 

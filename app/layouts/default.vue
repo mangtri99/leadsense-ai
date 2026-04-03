@@ -5,7 +5,7 @@ const toast = useToast()
 const open = ref(false)
 const { hotLeadCount } = useDashboard()
 
-// SSE — real-time notifikasi lead Hot baru
+// SSE — real-time notifications for new Hot leads
 onMounted(() => {
   const es = new EventSource('/api/notifications/stream')
 
@@ -15,8 +15,8 @@ onMounted(() => {
       hotLeadCount.value += data.leads.length
       data.leads.forEach((lead: { name: string, score: number }) => {
         toast.add({
-          title: `Hot Lead Baru: ${lead.name}`,
-          description: `Skor: ${lead.score}/100 — Hubungi segera!`,
+          title: `New Hot Lead: ${lead.name}`,
+          description: `Score: ${lead.score}/100 — Contact immediately!`,
           color: 'error',
           icon: 'i-lucide-flame',
           duration: 8000
@@ -41,12 +41,12 @@ const links = [[{
   to: '/leads',
   onSelect: () => { open.value = false }
 }, {
-  label: 'Input Lead Baru',
+  label: 'New Lead',
   icon: 'i-lucide-plus-circle',
   to: '/leads/new',
   onSelect: () => { open.value = false }
 }], [{
-  label: 'Dokumentasi',
+  label: 'Documentation',
   icon: 'i-lucide-book-open',
   to: 'https://ui.nuxt.com',
   target: '_blank'
@@ -54,7 +54,7 @@ const links = [[{
 
 const groups = computed(() => [{
   id: 'links',
-  label: 'Navigasi',
+  label: 'Navigation',
   items: links.flat()
 }])
 
@@ -63,16 +63,16 @@ onMounted(() => {
   if (cookie.value === 'accepted') return
 
   toast.add({
-    title: 'Kami menggunakan cookie untuk meningkatkan pengalaman Anda.',
+    title: 'We use cookies to improve your experience.',
     duration: 0,
     close: false,
     actions: [{
-      label: 'Terima',
+      label: 'Accept',
       color: 'neutral',
       variant: 'outline',
       onClick: () => { cookie.value = 'accepted' }
     }, {
-      label: 'Tolak',
+      label: 'Decline',
       color: 'neutral',
       variant: 'ghost'
     }]

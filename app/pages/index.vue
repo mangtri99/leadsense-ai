@@ -5,7 +5,7 @@ const { data: stats } = await useFetch('/api/dashboard/stats')
 
 const statCards = computed(() => [
   {
-    label: 'Total Lead',
+    label: 'Total Leads',
     value: stats.value?.total ?? 0,
     icon: 'i-lucide-users',
     color: 'text-primary'
@@ -35,7 +35,7 @@ const statCards = computed(() => [
     color: 'text-violet-500'
   },
   {
-    label: 'Rata-rata Skor',
+    label: 'Average Score',
     value: stats.value?.averageScore ?? 0,
     icon: 'i-lucide-bar-chart-2',
     color: 'text-green-500',
@@ -56,7 +56,7 @@ const statCards = computed(() => [
         </template>
         <template #right>
           <UTooltip
-            text="Notifikasi"
+            text="Notifications"
             :shortcuts="['N']"
           >
             <UButton
@@ -84,7 +84,7 @@ const statCards = computed(() => [
             size="md"
             class="rounded-full"
           >
-            Input Lead
+            New Lead
           </UButton>
         </template>
       </UDashboardNavbar>
@@ -121,7 +121,7 @@ const statCards = computed(() => [
           <UCard>
             <template #header>
               <p class="font-semibold text-highlighted">
-                Distribusi Status Lead
+                Lead Status Distribution
               </p>
             </template>
             <div class="space-y-3">
@@ -154,7 +154,7 @@ const statCards = computed(() => [
           <UCard>
             <template #header>
               <p class="font-semibold text-highlighted">
-                Panduan Prioritas
+                Priority Guide
               </p>
             </template>
             <div class="space-y-3 text-sm">
@@ -168,7 +168,7 @@ const statCards = computed(() => [
                     Hot (80–100)
                   </p>
                   <p class="text-muted">
-                    Hubungi dalam 1 jam
+                    Contact within 1 hour
                   </p>
                 </div>
               </div>
@@ -182,7 +182,7 @@ const statCards = computed(() => [
                     Warm (50–79)
                   </p>
                   <p class="text-muted">
-                    Follow-up hari yang sama
+                    Follow up same day
                   </p>
                 </div>
               </div>
@@ -196,7 +196,7 @@ const statCards = computed(() => [
                     Cold (20–49)
                   </p>
                   <p class="text-muted">
-                    Kirim katalog, follow-up 3 hari
+                    Send catalog, follow up in 3 days
                   </p>
                 </div>
               </div>
@@ -210,7 +210,7 @@ const statCards = computed(() => [
                     Nurture (0–19)
                   </p>
                   <p class="text-muted">
-                    Masukkan ke email sequence
+                    Add to email sequence
                   </p>
                 </div>
               </div>
@@ -222,7 +222,7 @@ const statCards = computed(() => [
         <UCard>
           <template #header>
             <p class="font-semibold text-highlighted">
-              Aksi Cepat
+              Quick Actions
             </p>
           </template>
           <div class="flex flex-wrap gap-3">
@@ -231,7 +231,7 @@ const statCards = computed(() => [
               icon="i-lucide-plus"
               color="primary"
             >
-              Input Lead Baru
+              New Lead
             </UButton>
             <UButton
               to="/leads"
@@ -239,7 +239,7 @@ const statCards = computed(() => [
               color="neutral"
               variant="outline"
             >
-              Lihat Semua Lead
+              View All Leads
             </UButton>
             <UButton
               to="/leads?status=Hot"

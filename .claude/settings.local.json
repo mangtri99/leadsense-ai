@@ -13,7 +13,8 @@
       "Bash(find /Users/mangtri/Web/leadsense-ai/node_modules/.pnpm/h3@2.0.1-rc.11 -name \"*.d.ts\" -exec grep -l \"Event\" {} \\\\;)",
       "Bash(pnpm db:seed:*)",
       "WebFetch(domain:www.anthropic.com)",
-      "WebFetch(domain:claude.com)"
+      "WebFetch(domain:claude.com)",
+      "WebFetch(domain:docs.anthropic.com)"
     ]
   }
 }

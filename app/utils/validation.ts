@@ -3,12 +3,12 @@ import { z } from 'zod'
 export const leadSchema = z.object({
   name: z
     .string()
-    .min(2, 'Nama minimal 2 karakter')
-    .max(100, 'Nama maksimal 100 karakter'),
+    .min(2, 'Name must be at least 2 characters')
+    .max(100, 'Name must be at most 100 characters'),
   rawMessage: z
     .string()
-    .min(10, 'Pesan inquiry minimal 10 karakter')
-    .max(2000, 'Pesan inquiry maksimal 2000 karakter'),
+    .min(10, 'Inquiry message must be at least 10 characters')
+    .max(2000, 'Inquiry message must be at most 2000 characters'),
   source: z
     .string()
     .optional()
