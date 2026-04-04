@@ -73,6 +73,11 @@ export default defineEventHandler(async (event) => {
       score: analysis.score,
       status: analysis.status,
       aiReplyDraft: analysis.replyDraft,
+      // Update extracted fields if AI detected new values
+      ...(analysis.destination && { destination: analysis.destination }),
+      ...(analysis.budget && { budget: analysis.budget }),
+      ...(analysis.travelDate && { travelDate: analysis.travelDate }),
+      ...(analysis.paxCount && { paxCount: analysis.paxCount }),
       updatedAt: new Date(),
       lastActivityAt: new Date()
     })
