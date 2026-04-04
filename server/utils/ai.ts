@@ -1,4 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
+import type { HotelRaw } from './hotels'
+import { formatHotelForPrompt } from './hotels'
 
 export interface LeadAnalysisResult {
   score: number
@@ -90,6 +92,80 @@ function parseAIResponse(text: string): LeadAnalysisResult {
     budget: parsed.budget || null,
     travelDate: parsed.travelDate || null,
     paxCount: parsed.paxCount ? Number(parsed.paxCount) : null
+  }
+}
+
+export interface HotelSelection {
+  id: string
+  name: string
+  reason: string
+}
+
+const HOTEL_SELECTION_PROMPT = `You are a travel sales assistant. Given a customer's travel profile and a list of available hotels, select the 1-3 best matching hotels.
+
+Consider:
+- Budget fit: does the hotel price match the customer's budget?
+- Group size (pax): is the hotel suitable for the number of travelers?
+- Amenities relevance: match preferences implied by their inquiry
+- Guest rating: prefer higher-rated hotels if budget allows
+- Refundability: prefer free cancellation for uncertain bookings
+
+Return ONLY a JSON array (no markdown, no comments):
+[
+  { "id": "<hotel_id>", "name": "<hotel_name>", "reason": "<1 sentence why this hotel fits>" },
+  ...
+]
+
+If no hotels are a good fit, return an empty array: []`
+
+export async function selectHotelsWithAI(
+  profile: { destination: string | null, budget: string | null, paxCount: number | null, travelDate: string | null, rawMessage: string },
+  candidates: HotelRaw[]
+): Promise<HotelSelection[]> {
+  if (!candidates.length) return []
+
+  const config = useRuntimeConfig()
+  const client = new Anthropic({ apiKey: config.anthropicApiKey })
+
+  const hotelList = candidates.map((h, i) => formatHotelForPrompt(h, i)).join('\n\n')
+
+  const customerProfile = [
+    `Destination: ${profile.destination || 'Not specified'}`,
+    `Budget: ${profile.budget || 'Not specified'}`,
+    `Travelers: ${profile.paxCount ? `${profile.paxCount} pax` : 'Not specified'}`,
+    `Travel Date: ${profile.travelDate || 'Not specified'}`,
+    `Original inquiry: "${profile.rawMessage.slice(0, 300)}"`
+  ].join('\n')
+
+  const userContent = `Customer Profile:\n${customerProfile}\n\nAvailable Hotels:\n${hotelList}`
+
+  try {
+    const message = await Promise.race([
+      client.messages.create({
+        model: config.anthropicModel as string,
+        max_tokens: 512,
+        system: HOTEL_SELECTION_PROMPT,
+        messages: [{ role: 'user', content: userContent }]
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('AI_TIMEOUT')), AI_TIMEOUT_MS)
+      )
+    ])
+
+    const text = message?.content?.[0]?.type === 'text' ? message.content[0].text : '[]'
+    const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim()
+    const parsed = JSON.parse(cleaned)
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter((item: unknown) => item && typeof item === 'object' && 'id' in (item as object))
+      .slice(0, 3)
+      .map((item: Record<string, unknown>) => ({
+        id: String(item.id),
+        name: String(item.name || ''),
+        reason: String(item.reason || '')
+      }))
+  } catch {
+    return []
   }
 }
 

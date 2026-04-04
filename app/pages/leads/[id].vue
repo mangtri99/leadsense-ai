@@ -190,10 +190,33 @@ interface Hotel {
   amenities: string[]
 }
 
-const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/hotels', {
-  query: computed(() => ({ destination: lead.value?.destination || '', limit: 6 })),
-  immediate: !!lead.value?.destination
+interface HotelSelection { id: string, name: string, reason: string }
+
+const aiSelections = computed<HotelSelection[]>(() => {
+  const raw = (lead.value as { aiRecommendedHotels?: string | null })?.aiRecommendedHotels
+  if (!raw) return []
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return []
+  }
 })
+
+const hotelQuery = computed(() => {
+  if (aiSelections.value.length) {
+    return { ids: aiSelections.value.map(s => s.id).join(',') }
+  }
+  return { destination: lead.value?.destination || '', limit: 6 }
+})
+
+const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/hotels', {
+  query: hotelQuery,
+  immediate: !!(lead.value?.destination || aiSelections.value.length)
+})
+
+function hotelReason(hotelId: string): string | null {
+  return aiSelections.value.find(s => s.id === hotelId)?.reason ?? null
+}
 </script>
 
 <template>
@@ -628,8 +651,13 @@ const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/h
                 <p class="font-semibold text-highlighted">
                   Recommended Hotels
                 </p>
-                <p class="text-xs text-muted mt-0.5">
-                  {{ lead.destination }}
+                <p class="text-xs text-muted mt-0.5 flex items-center gap-1">
+                  <UIcon
+                    v-if="aiSelections.length"
+                    name="i-lucide-brain-circuit"
+                    class="size-3"
+                  />
+                  {{ aiSelections.length ? 'AI-selected for this lead' : lead.destination }}
                 </p>
               </div>
               <UIcon
@@ -706,6 +734,15 @@ const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/h
               <div class="p-3 space-y-1.5">
                 <p class="font-semibold text-highlighted text-sm leading-tight line-clamp-1">
                   {{ hotel.name }}
+                </p>
+                <p
+                  v-if="hotelReason(hotel.id)"
+                  class="text-xs text-primary bg-primary/8 rounded-lg px-2 py-1 leading-snug"
+                >
+                  <UIcon
+                    name="i-lucide-brain-circuit"
+                    class="size-3 inline mr-1"
+                  />{{ hotelReason(hotel.id) }}
                 </p>
                 <div class="flex items-center gap-2">
                   <div

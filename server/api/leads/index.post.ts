@@ -1,8 +1,9 @@
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { leads } from '../../database/schema'
-import { analyzeLeadWithAI } from '../../utils/ai'
+import { analyzeLeadWithAI, selectHotelsWithAI } from '../../utils/ai'
 import { sendHotLeadEmail } from '../../utils/email'
+import { getHotelsByDestination } from '../../utils/hotels'
 
 const bodySchema = z.object({
   name: z.string().min(2).max(100),
@@ -26,7 +27,7 @@ export default defineEventHandler(async (event) => {
   const { name, rawMessage, source, email, phone } = parsed.data
   const db = useDb()
 
-  const [lead] = await db.insert(leads).values({
+  const insertedLeads = await db.insert(leads).values({
     name,
     rawMessage,
     source,
@@ -34,7 +35,21 @@ export default defineEventHandler(async (event) => {
     phone: phone || null
   }).returning()
 
+  const lead = insertedLeads[0]
+  if (!lead) throw createError({ statusCode: 500, message: 'Failed to create lead.' })
+
   const analysis = await analyzeLeadWithAI(rawMessage)
+
+  // AI hotel selection based on extracted profile
+  let aiRecommendedHotels: string | null = null
+  if (analysis.destination) {
+    const candidates = getHotelsByDestination(analysis.destination, 10)
+    const selections = await selectHotelsWithAI(
+      { destination: analysis.destination, budget: analysis.budget, paxCount: analysis.paxCount, travelDate: analysis.travelDate, rawMessage },
+      candidates
+    )
+    if (selections.length) aiRecommendedHotels = JSON.stringify(selections)
+  }
 
   const [updatedLead] = await db
     .update(leads)
@@ -47,6 +62,7 @@ export default defineEventHandler(async (event) => {
       budget: analysis.budget,
       travelDate: analysis.travelDate,
       paxCount: analysis.paxCount,
+      aiRecommendedHotels,
       updatedAt: new Date()
     })
     .where(eq(leads.id, lead.id))

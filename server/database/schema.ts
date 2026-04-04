@@ -24,6 +24,7 @@ export const leads = pgTable('leads', {
   paxCount: integer('pax_count'),
   email: text('email'),
   phone: text('phone'),
+  aiRecommendedHotels: text('ai_recommended_hotels'), // JSON: [{ id, name, reason }]
   lastActivityAt: timestamp('last_activity_at').defaultNow().notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()

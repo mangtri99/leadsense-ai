@@ -14,6 +14,7 @@ export interface Lead {
   paxCount: number | null
   email: string | null
   phone: string | null
+  aiRecommendedHotels: string | null
   lastActivityAt: Date | string
   createdAt: Date | string
   updatedAt: Date | string

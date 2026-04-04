@@ -1,8 +1,9 @@
 import { eq, asc } from 'drizzle-orm'
 import { z } from 'zod'
 import { followUps, leads } from '../../../database/schema'
-import { analyzeLeadWithAI } from '../../../utils/ai'
+import { analyzeLeadWithAI, selectHotelsWithAI } from '../../../utils/ai'
 import { sendHotLeadEmail } from '../../../utils/email'
+import { getHotelsByDestination } from '../../../utils/hotels'
 
 const bodySchema = z.object({
   message: z.string().min(1, 'Message cannot be empty.').max(2000),
@@ -67,6 +68,23 @@ export default defineEventHandler(async (event) => {
 
   const analysis = await analyzeLeadWithAI(contextMessage)
 
+  // Determine effective destination for hotel selection
+  const effectiveDestination = analysis.destination || lead.destination
+
+  // AI hotel selection — re-run if destination or profile changed
+  let aiRecommendedHotelsUpdate: { aiRecommendedHotels: string | null } = { aiRecommendedHotels: lead.aiRecommendedHotels ?? null }
+  if (effectiveDestination) {
+    const candidates = getHotelsByDestination(effectiveDestination, 10)
+    const effectiveBudget = analysis.budget || lead.budget
+    const effectivePax = analysis.paxCount || lead.paxCount
+    const effectiveDate = analysis.travelDate || lead.travelDate
+    const selections = await selectHotelsWithAI(
+      { destination: effectiveDestination, budget: effectiveBudget, paxCount: effectivePax, travelDate: effectiveDate, rawMessage: contextMessage },
+      candidates
+    )
+    aiRecommendedHotelsUpdate = { aiRecommendedHotels: selections.length ? JSON.stringify(selections) : null }
+  }
+
   const [updatedLead] = await db
     .update(leads)
     .set({
@@ -78,6 +96,7 @@ export default defineEventHandler(async (event) => {
       ...(analysis.budget && { budget: analysis.budget }),
       ...(analysis.travelDate && { travelDate: analysis.travelDate }),
       ...(analysis.paxCount && { paxCount: analysis.paxCount }),
+      ...aiRecommendedHotelsUpdate,
       updatedAt: new Date(),
       lastActivityAt: new Date()
     })
