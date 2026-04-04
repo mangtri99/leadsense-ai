@@ -27,13 +27,15 @@ export interface HotelRaw {
 
 const KEY_AMENITIES = ['Free WiFi', 'Pool', 'pool', 'Fitness', 'Breakfast', 'Free parking', 'Airport', 'Spa', 'Restaurant']
 
-const hotels = hotelsData as HotelRaw[]
+const mockHotels = hotelsData as HotelRaw[]
 
-export function getHotelsByDestination(destination: string, limit = 10): HotelRaw[] {
+// --- Mock implementations ---
+
+function mockGetByDestination(destination: string, limit: number): HotelRaw[] {
   const query = destination.toLowerCase().trim()
   if (!query) return []
 
-  return hotels
+  return mockHotels
     .filter((hotel) => {
       if (!hotel.hasRoomAvailability) return false
       const d = hotel.destinationDetails
@@ -50,8 +52,59 @@ export function getHotelsByDestination(destination: string, limit = 10): HotelRa
     .slice(0, limit)
 }
 
-export function getHotelsById(ids: string[]): HotelRaw[] {
-  return hotels.filter(h => ids.includes(h.id))
+function mockGetById(ids: string[]): HotelRaw[] {
+  return mockHotels.filter(h => ids.includes(h.id))
+}
+
+// --- Public async API ---
+
+export async function getHotelsByDestination(destination: string, limit = 10): Promise<HotelRaw[]> {
+  const config = useRuntimeConfig()
+
+  if (config.useMockData) {
+    return mockGetByDestination(destination, limit)
+  }
+
+  // Real API mode
+  if (!config.apiBaseUrl) {
+    console.warn('[hotels] API_BASE_URL tidak dikonfigurasi, fallback ke mock data')
+    return mockGetByDestination(destination, limit)
+  }
+
+  try {
+    const response = await $fetch<HotelRaw[]>(`${config.apiBaseUrl}/hotels`, {
+      query: { destination, limit }
+    })
+    return Array.isArray(response) ? response : []
+  } catch (err) {
+    console.error('[hotels] Real API gagal, fallback ke mock data:', err)
+    return mockGetByDestination(destination, limit)
+  }
+}
+
+export async function getHotelsById(ids: string[]): Promise<HotelRaw[]> {
+  if (!ids.length) return []
+
+  const config = useRuntimeConfig()
+
+  if (config.useMockData) {
+    return mockGetById(ids)
+  }
+
+  if (!config.apiBaseUrl) {
+    console.warn('[hotels] API_BASE_URL tidak dikonfigurasi, fallback ke mock data')
+    return mockGetById(ids)
+  }
+
+  try {
+    const response = await $fetch<HotelRaw[]>(`${config.apiBaseUrl}/hotels`, {
+      query: { ids: ids.join(',') }
+    })
+    return Array.isArray(response) ? response : []
+  } catch (err) {
+    console.error('[hotels] Real API gagal, fallback ke mock data:', err)
+    return mockGetById(ids)
+  }
 }
 
 export function formatHotelForPrompt(hotel: HotelRaw, index: number): string {

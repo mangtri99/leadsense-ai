@@ -10,11 +10,11 @@ export default defineEventHandler(async (event) => {
 
   // Fetch by explicit IDs (for AI-selected hotels)
   if (ids.length) {
-    const hotels = getHotelsById(ids)
+    const hotels = await getHotelsById(ids)
     return hotels.map(h => formatHotelForUI(h))
   }
 
   // Fetch by destination filter
-  const hotels = getHotelsByDestination(destination, limit)
+  const hotels = await getHotelsByDestination(destination, limit)
   return hotels.map(h => formatHotelForUI(h))
 })
