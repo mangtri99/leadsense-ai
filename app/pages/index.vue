@@ -36,7 +36,7 @@ const statCards = computed(() => [
   },
   {
     label: 'Average Score',
-    value: stats.value?.averageScore ?? 0,
+    value: Math.round(stats.value?.avg ? Number(stats.value.avg) : 0),
     icon: 'i-lucide-bar-chart-2',
     color: 'text-green-500',
     suffix: '/100'
@@ -116,8 +116,8 @@ const statCards = computed(() => [
           </UCard>
         </div>
 
-        <!-- Lead Distribution -->
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <!-- Lead Distribution + Pipeline -->
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
           <UCard>
             <template #header>
               <p class="font-semibold text-highlighted">
@@ -151,69 +151,67 @@ const statCards = computed(() => [
             </div>
           </UCard>
 
-          <UCard>
+          <!-- Pipeline Stage Widget -->
+          <UCard class="xl:col-span-2">
             <template #header>
-              <p class="font-semibold text-highlighted">
-                Priority Guide
-              </p>
+              <div class="flex items-center justify-between">
+                <p class="font-semibold text-highlighted">
+                  Sales Pipeline
+                </p>
+                <NuxtLink
+                  to="/leads"
+                  class="text-xs text-primary hover:underline"
+                >
+                  View all
+                </NuxtLink>
+              </div>
             </template>
-            <div class="space-y-3 text-sm">
-              <div class="flex items-start gap-3 p-3 rounded-lg bg-red-500/10">
-                <UIcon
-                  name="i-lucide-flame"
-                  class="size-4 text-red-500 mt-0.5 shrink-0"
-                />
-                <div>
-                  <p class="font-medium text-highlighted">
-                    Hot (80–100)
-                  </p>
-                  <p class="text-muted">
-                    Contact within 1 hour
-                  </p>
+
+            <div class="grid grid-cols-5 gap-3">
+              <NuxtLink
+                v-for="stage in [
+                  { key: 'new', label: 'New', icon: 'i-lucide-inbox', color: 'text-muted', bg: 'bg-muted/50', count: stats?.pipeline?.new ?? 0 },
+                  { key: 'contacted', label: 'Contacted', icon: 'i-lucide-phone', color: 'text-sky-500', bg: 'bg-sky-500/10', count: stats?.pipeline?.contacted ?? 0 },
+                  { key: 'negotiating', label: 'Negotiating', icon: 'i-lucide-handshake', color: 'text-amber-500', bg: 'bg-amber-500/10', count: stats?.pipeline?.negotiating ?? 0 },
+                  { key: 'closed_won', label: 'Closed Won', icon: 'i-lucide-check-circle-2', color: 'text-green-500', bg: 'bg-green-500/10', count: stats?.pipeline?.closed_won ?? 0 },
+                  { key: 'closed_lost', label: 'Closed Lost', icon: 'i-lucide-x-circle', color: 'text-red-400', bg: 'bg-red-400/10', count: stats?.pipeline?.closed_lost ?? 0 }
+                ]"
+                :key="stage.key"
+                :to="`/leads?pipeline=${stage.key}`"
+                class="flex flex-col items-center gap-2 p-3 rounded-xl transition-colors hover:bg-elevated cursor-pointer text-center"
+              >
+                <div
+                  class="w-10 h-10 rounded-full flex items-center justify-center"
+                  :class="stage.bg"
+                >
+                  <UIcon
+                    :name="stage.icon"
+                    :class="['size-5', stage.color]"
+                  />
                 </div>
-              </div>
-              <div class="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10">
-                <UIcon
-                  name="i-lucide-sun"
-                  class="size-4 text-amber-500 mt-0.5 shrink-0"
-                />
-                <div>
-                  <p class="font-medium text-highlighted">
-                    Warm (50–79)
-                  </p>
-                  <p class="text-muted">
-                    Follow up same day
-                  </p>
-                </div>
-              </div>
-              <div class="flex items-start gap-3 p-3 rounded-lg bg-sky-500/10">
-                <UIcon
-                  name="i-lucide-snowflake"
-                  class="size-4 text-sky-500 mt-0.5 shrink-0"
-                />
-                <div>
-                  <p class="font-medium text-highlighted">
-                    Cold (20–49)
-                  </p>
-                  <p class="text-muted">
-                    Send catalog, follow up in 3 days
-                  </p>
-                </div>
-              </div>
-              <div class="flex items-start gap-3 p-3 rounded-lg bg-violet-500/10">
-                <UIcon
-                  name="i-lucide-droplets"
-                  class="size-4 text-violet-500 mt-0.5 shrink-0"
-                />
-                <div>
-                  <p class="font-medium text-highlighted">
-                    Nurture (0–19)
-                  </p>
-                  <p class="text-muted">
-                    Add to email sequence
-                  </p>
-                </div>
-              </div>
+                <p class="text-2xl font-bold text-highlighted">
+                  {{ stage.count }}
+                </p>
+                <p class="text-xs text-muted leading-tight">
+                  {{ stage.label }}
+                </p>
+              </NuxtLink>
+            </div>
+
+            <!-- Progress bar -->
+            <div class="mt-4 flex h-2 rounded-full overflow-hidden gap-0.5">
+              <div
+                v-for="stage in [
+                  { key: 'new', color: 'bg-muted', count: stats?.pipeline?.new ?? 0 },
+                  { key: 'contacted', color: 'bg-sky-500', count: stats?.pipeline?.contacted ?? 0 },
+                  { key: 'negotiating', color: 'bg-amber-500', count: stats?.pipeline?.negotiating ?? 0 },
+                  { key: 'closed_won', color: 'bg-green-500', count: stats?.pipeline?.closed_won ?? 0 },
+                  { key: 'closed_lost', color: 'bg-red-400', count: stats?.pipeline?.closed_lost ?? 0 }
+                ]"
+                :key="stage.key"
+                :class="['h-full transition-all rounded-full', stage.color]"
+                :style="{ width: stats?.total ? `${Math.round((stage.count / stats.total) * 100)}%` : '0%' }"
+              />
             </div>
           </UCard>
         </div>

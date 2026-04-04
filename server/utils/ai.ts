@@ -12,36 +12,36 @@ export interface LeadAnalysisResult {
   paxCount: number | null
 }
 
-const SYSTEM_PROMPT = `Kamu adalah AI analis lead untuk tim sales perusahaan travel partner Indonesia.
+const SYSTEM_PROMPT = `You are an AI lead analyst for a travel partner company's sales team.
 
-Tugasmu adalah menganalisis pesan inquiry calon pelanggan dan mengembalikan hasil analisis dalam format JSON.
+Your job is to analyze customer inquiry messages and return a structured JSON analysis.
 
-## Dimensi Scoring (Total 100 poin)
-- **Urgensi** (30 poin): Apakah tanggal keberangkatan sudah ditentukan atau mendesak?
-- **Kejelasan Budget** (25 poin): Apakah budget spesifik atau range disebutkan?
-- **Tingkat Intent** (25 poin): Apakah bahasa menunjukkan keputusan/niat beli, bukan sekadar tanya?
-- **Kelengkapan Info** (20 poin): Apakah destinasi, pax, tanggal, dan budget semuanya ada?
+## Scoring Dimensions (Total 100 points)
+- **Urgency** (30 points): Is the departure date fixed or time-sensitive?
+- **Budget Clarity** (25 points): Is a specific budget or range mentioned?
+- **Intent Level** (25 points): Does the language indicate a buying decision, not just curiosity?
+- **Info Completeness** (20 points): Are destination, pax count, date, and budget all present?
 
-## Klasifikasi Status
-- **Hot** (80–100): Budget jelas, tanggal fix, serius booking → hubungi dalam 1 jam
-- **Warm** (50–79): Info cukup, menunjukkan minat kuat → follow-up hari yang sama
-- **Cold** (20–49): Masih exploring, info minim → kirim katalog, follow-up 3 hari
-- **Nurture** (0–19): Tidak ada urgensi, sekedar tanya-tanya → masukkan ke email sequence
+## Status Classification
+- **Hot** (80–100): Clear budget, fixed date, serious about booking → contact within 1 hour
+- **Warm** (50–79): Sufficient info, strong interest shown → follow up same day
+- **Cold** (20–49): Still exploring, minimal info → send catalog, follow up in 3 days
+- **Nurture** (0–19): No urgency, just browsing → add to email nurture sequence
 
-## Output Format (JSON ketat, tanpa markdown, tanpa komentar)
+## Output Format (strict JSON, no markdown, no comments)
 {
   "score": <integer 0-100>,
   "status": "<Hot|Warm|Cold|Nurture>",
-  "analysis": "<penjelasan singkat 2-3 kalimat alasan scoring dalam Bahasa Indonesia>",
-  "replyDraft": "<draft balasan personal Bahasa Indonesia yang siap dikirim oleh sales, hangat dan profesional>",
-  "recommendations": ["<paket wisata 1>", "<paket wisata 2>", "<paket wisata 3>"],
-  "destination": "<nama destinasi atau null>",
-  "budget": "<nilai budget sebagai string atau null>",
-  "travelDate": "<tanggal atau periode perjalanan sebagai string atau null>",
-  "paxCount": <jumlah orang sebagai integer atau null>
+  "analysis": "<2-3 sentence explanation of the score in English>",
+  "replyDraft": "<personalized reply draft in English, ready to send by sales, warm and professional>",
+  "recommendations": ["<travel package 1>", "<travel package 2>", "<travel package 3>"],
+  "destination": "<destination name or null>",
+  "budget": "<budget value as string or null>",
+  "travelDate": "<travel date or period as string or null>",
+  "paxCount": <number of people as integer or null>
 }
 
-Kembalikan HANYA JSON di atas, tanpa teks lain apapun.`
+Return ONLY the JSON above, no other text.`
 
 const AI_TIMEOUT_MS = 15000
 
@@ -64,9 +64,9 @@ function buildFallback(): LeadAnalysisResult {
   return {
     score: 30,
     status: 'Cold',
-    analysis: 'Analisis otomatis tidak tersedia saat ini. Lead perlu ditinjau secara manual.',
-    replyDraft: 'Halo! Terima kasih sudah menghubungi kami. Kami telah menerima inquiry Anda dan tim kami akan segera menghubungi Anda lebih lanjut. Apakah ada informasi tambahan yang bisa Anda bagikan mengenai rencana perjalanan Anda?',
-    recommendations: ['Paket Wisata Domestik', 'Paket Honeymoon', 'Paket Keluarga'],
+    analysis: 'Automatic analysis is currently unavailable. This lead needs to be reviewed manually.',
+    replyDraft: 'Hi! Thank you for reaching out. We have received your inquiry and our team will get back to you shortly. Could you share any additional details about your travel plans?',
+    recommendations: ['Domestic Tour Package', 'Honeymoon Package', 'Family Package'],
     destination: null,
     budget: null,
     travelDate: null,
@@ -108,7 +108,7 @@ export async function analyzeLeadWithAI(rawMessage: string): Promise<LeadAnalysi
         max_tokens: 1024,
         system: SYSTEM_PROMPT,
         messages: [
-          { role: 'user', content: `Analisis pesan inquiry berikut:\n\n"${sanitized}"` }
+          { role: 'user', content: `Analyze the following customer inquiry:\n\n"${sanitized}"` }
         ]
       }),
       new Promise<never>((_, reject) =>
@@ -116,7 +116,7 @@ export async function analyzeLeadWithAI(rawMessage: string): Promise<LeadAnalysi
       )
     ])
 
-    text = message.content[0].type === 'text' ? message.content[0].text : ''
+    text = message?.content?.[0]?.type === 'text' ? message.content[0].text : ''
   } catch (err) {
     if ((err as Error)?.message === 'AI_TIMEOUT') {
       throw createError({ statusCode: 504, message: 'AI analysis took too long. Please try again.' })

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useClipboard } from '@vueuse/core'
-import type { Lead } from '~/server/database/schema'
+import type { Lead } from '#shared/types'
 
 const route = useRoute()
 const toast = useToast()
@@ -23,8 +23,8 @@ const statusConfig: Record<string, { color: string, icon: string, bg: string, ri
 
 // ── Pipeline Stage ───────────────────────────────────────
 const pipelineStages = [
-  { value: 'new', label: 'New', icon: 'i-lucide-inbox', color: 'neutral' as const },
-  { value: 'contacted', label: 'Contacted', icon: 'i-lucide-phone', color: 'sky' as const },
+  { value: 'new', label: 'New', icon: 'i-lucide-inbox', color: 'primary' as const },
+  { value: 'contacted', label: 'Contacted', icon: 'i-lucide-phone', color: 'info' as const },
   { value: 'negotiating', label: 'Negotiating', icon: 'i-lucide-handshake', color: 'warning' as const },
   { value: 'closed_won', label: 'Closed Won', icon: 'i-lucide-check-circle-2', color: 'success' as const },
   { value: 'closed_lost', label: 'Closed Lost', icon: 'i-lucide-x-circle', color: 'error' as const }
@@ -588,11 +588,12 @@ const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/h
                     v-model="replyMessage"
                     placeholder="Paste customer's reply here..."
                     :rows="3"
+                    class="w-full"
                     @keydown.ctrl.enter="submitReply"
                   />
                   <div class="flex items-center justify-between">
                     <label class="flex items-center gap-2 text-sm text-muted cursor-pointer">
-                      <UToggle
+                      <USwitch
                         v-model="reanalyze"
                         size="sm"
                       />

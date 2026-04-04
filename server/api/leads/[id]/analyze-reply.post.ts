@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, asc } from 'drizzle-orm'
 import { z } from 'zod'
 import { followUps, leads } from '../../../database/schema'
 import { analyzeLeadWithAI } from '../../../utils/ai'
@@ -42,11 +42,30 @@ export default defineEventHandler(async (event) => {
     return { followUp, analysis: null }
   }
 
-  // Re-analyze with AI
+  // Re-analyze with full conversation context
   const previousScore = lead.score
   const previousStatus = lead.status
 
-  const analysis = await analyzeLeadWithAI(message)
+  // Fetch all previous customer messages for context
+  const previousReplies = await db
+    .select({ note: followUps.note })
+    .from(followUps)
+    .where(eq(followUps.leadId, leadId))
+    .orderBy(asc(followUps.createdAt))
+
+  // Build context: original inquiry + prior customer replies + new message
+  const previousMessages = previousReplies
+    .filter(r => r.note !== message) // exclude the one we just inserted
+    .map((r, i) => `Customer follow-up ${i + 1}:\n"${r.note}"`)
+    .join('\n\n')
+
+  const contextMessage = [
+    `Pesan inquiry awal:\n"${lead.rawMessage}"`,
+    previousMessages,
+    `Pesan terbaru dari customer:\n"${message}"`
+  ].filter(Boolean).join('\n\n')
+
+  const analysis = await analyzeLeadWithAI(contextMessage)
 
   const [updatedLead] = await db
     .update(leads)

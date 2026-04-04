@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { z } from 'zod'
 import { useClipboard } from '@vueuse/core'
-import type { Lead } from '~/server/database/schema'
+import type { Lead } from '#shared/types'
 
 const toast = useToast()
 

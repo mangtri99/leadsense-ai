@@ -1,19 +1,34 @@
 <script setup lang="ts">
-import type { Lead } from '~/server/database/schema'
+import type { Lead } from '~/shared/types'
 
 const route = useRoute()
 const router = useRouter()
 
 const activeStatus = ref((route.query.status as string) || '')
+const activePipeline = ref((route.query.pipeline as string) || '')
 const currentPage = ref(Number(route.query.page) || 1)
+
+function buildQuery(overrides: Record<string, unknown> = {}) {
+  return {
+    ...(activeStatus.value ? { status: activeStatus.value } : {}),
+    ...(activePipeline.value ? { pipeline: activePipeline.value } : {}),
+    page: currentPage.value,
+    ...overrides
+  }
+}
 
 watch(activeStatus, () => {
   currentPage.value = 1
-  router.replace({ query: { ...(activeStatus.value ? { status: activeStatus.value } : {}), page: 1 } })
+  router.replace({ query: buildQuery({ page: 1 }) })
+})
+
+watch(activePipeline, () => {
+  currentPage.value = 1
+  router.replace({ query: buildQuery({ page: 1 }) })
 })
 
 watch(currentPage, (val) => {
-  router.replace({ query: { ...(activeStatus.value ? { status: activeStatus.value } : {}), page: val } })
+  router.replace({ query: buildQuery({ page: val }) })
 })
 
 const { data, pending, refresh } = await useFetch<{
@@ -25,6 +40,7 @@ const { data, pending, refresh } = await useFetch<{
 }>('/api/leads', {
   query: computed(() => ({
     ...(activeStatus.value ? { status: activeStatus.value } : {}),
+    ...(activePipeline.value ? { pipeline: activePipeline.value } : {}),
     page: currentPage.value,
     limit: 20
   }))
@@ -40,6 +56,15 @@ const statusOptions = [
   { label: 'Warm', value: 'Warm' },
   { label: 'Cold', value: 'Cold' },
   { label: 'Nurture', value: 'Nurture' }
+]
+
+const pipelineOptions = [
+  { label: 'All Stages', value: '', icon: 'i-lucide-layers' },
+  { label: 'New', value: 'new', icon: 'i-lucide-inbox' },
+  { label: 'Contacted', value: 'contacted', icon: 'i-lucide-phone' },
+  { label: 'Negotiating', value: 'negotiating', icon: 'i-lucide-handshake' },
+  { label: 'Closed Won', value: 'closed_won', icon: 'i-lucide-check-circle-2' },
+  { label: 'Closed Lost', value: 'closed_lost', icon: 'i-lucide-x-circle' }
 ]
 
 const statusConfig: Record<string, { color: string, icon: string, badge: 'error' | 'warning' | 'info' | 'secondary' }> = {
@@ -68,8 +93,11 @@ function timeAgo(date: string | Date) {
 }
 
 function exportCSV() {
-  const query = activeStatus.value ? `?status=${activeStatus.value}` : ''
-  window.location.href = `/api/leads/export${query}`
+  const params = new URLSearchParams()
+  if (activeStatus.value) params.set('status', activeStatus.value)
+  if (activePipeline.value) params.set('pipeline', activePipeline.value)
+  const qs = params.toString()
+  window.location.href = `/api/leads/export${qs ? `?${qs}` : ''}`
 }
 </script>
 
@@ -96,17 +124,36 @@ function exportCSV() {
 
       <UDashboardToolbar>
         <template #left>
-          <div class="flex gap-2">
-            <UButton
-              v-for="opt in statusOptions"
-              :key="opt.value"
-              :variant="activeStatus === opt.value ? 'solid' : 'ghost'"
-              :color="activeStatus === opt.value ? 'primary' : 'neutral'"
-              size="sm"
-              @click="activeStatus = opt.value"
-            >
-              {{ opt.label }}
-            </UButton>
+          <div class="flex flex-col gap-3 py-2">
+            <!-- AI Score filter -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-xs text-muted w-12 shrink-0">Score</span>
+              <UButton
+                v-for="opt in statusOptions"
+                :key="opt.value"
+                :variant="activeStatus === opt.value ? 'solid' : 'ghost'"
+                :color="activeStatus === opt.value ? 'primary' : 'neutral'"
+                size="sm"
+                @click="activeStatus = opt.value"
+              >
+                {{ opt.label }}
+              </UButton>
+            </div>
+            <!-- Pipeline Stage filter -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-xs text-muted w-12 shrink-0">Stage</span>
+              <UButton
+                v-for="opt in pipelineOptions"
+                :key="opt.value"
+                :icon="opt.icon"
+                :variant="activePipeline === opt.value ? 'solid' : 'ghost'"
+                :color="activePipeline === opt.value ? 'neutral' : 'neutral'"
+                size="sm"
+                @click="activePipeline = opt.value"
+              >
+                {{ opt.label }}
+              </UButton>
+            </div>
           </div>
         </template>
         <template #right>
@@ -152,7 +199,9 @@ function exportCSV() {
             No leads yet
           </p>
           <p class="text-muted text-sm mt-1">
-            {{ activeStatus ? `No leads with status ${activeStatus}` : 'Start by adding your first lead' }}
+            {{ activeStatus || activePipeline
+              ? `No leads matching the selected filters`
+              : 'Start by adding your first lead' }}
           </p>
           <UButton
             to="/leads/new"

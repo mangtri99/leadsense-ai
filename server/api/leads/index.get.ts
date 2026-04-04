@@ -1,4 +1,4 @@
-import { desc, eq, count } from 'drizzle-orm'
+import { desc, eq, count, and } from 'drizzle-orm'
 import { leads } from '../../database/schema'
 
 export default defineEventHandler(async (event) => {
@@ -6,13 +6,19 @@ export default defineEventHandler(async (event) => {
 
   const query = getQuery(event)
   const status = query.status as string | undefined
+  const pipeline = query.pipeline as string | undefined
   const page = Math.max(1, Number(query.page) || 1)
   const limit = Math.min(50, Math.max(1, Number(query.limit) || 20))
   const offset = (page - 1) * limit
 
   const db = useDb()
 
-  const where = status ? eq(leads.status, status) : undefined
+  const conditions = [
+    status ? eq(leads.status, status) : undefined,
+    pipeline ? eq(leads.pipelineStage, pipeline) : undefined
+  ].filter(Boolean) as Parameters<typeof and>
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined
 
   const countResult = await db
     .select({ total: count() })

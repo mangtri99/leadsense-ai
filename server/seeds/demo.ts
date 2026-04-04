@@ -31,7 +31,7 @@ async function seed() {
       email: 'demo@leadsense.ai',
       password: hashedPassword
     }).returning()
-    demoUserId = newUser.id
+    demoUserId = newUser?.id
     console.log('✓ Demo user dibuat')
   } else {
     console.log('✓ User sudah ada, skip')

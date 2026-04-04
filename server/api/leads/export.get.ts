@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm'
+import { desc, eq, and } from 'drizzle-orm'
 import { leads } from '../../database/schema'
 
 export default defineEventHandler(async (event) => {
@@ -6,12 +6,18 @@ export default defineEventHandler(async (event) => {
 
   const query = getQuery(event)
   const status = query.status as string | undefined
+  const pipeline = query.pipeline as string | undefined
 
   const db = useDb()
 
-  const rows = status
-    ? await db.select().from(leads).where(eq(leads.status, status)).orderBy(desc(leads.createdAt))
-    : await db.select().from(leads).orderBy(desc(leads.createdAt))
+  const conditions = [
+    status ? eq(leads.status, status) : undefined,
+    pipeline ? eq(leads.pipelineStage, pipeline) : undefined
+  ].filter(Boolean) as Parameters<typeof and>
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined
+
+  const rows = await db.select().from(leads).where(where).orderBy(desc(leads.createdAt))
 
   const headers = ['ID', 'Name', 'Email', 'Phone', 'Status', 'Score', 'Source', 'Destination', 'Budget', 'Pax', 'Travel Date', 'Date Added']
 

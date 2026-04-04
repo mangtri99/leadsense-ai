@@ -16,7 +16,8 @@
       "WebFetch(domain:claude.com)",
       "WebFetch(domain:docs.anthropic.com)",
       "Bash(pnpm typecheck:*)",
-      "Bash(pnpm db:push:*)"
+      "Bash(pnpm db:push:*)",
+      "Bash(grep:*)"
     ]
   }
 }
