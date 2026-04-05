@@ -4,6 +4,98 @@ import type { Lead } from '~/shared/types'
 const route = useRoute()
 const router = useRouter()
 
+// --- Import modal state ---
+const importModalOpen = ref(false)
+const importFile = ref<File | null>(null)
+const importLoading = ref(false)
+const importFileInput = ref<HTMLInputElement | null>(null)
+const isDragging = ref(false)
+const toast = useToast()
+
+function openImportModal() {
+  importFile.value = null
+  importModalOpen.value = true
+}
+
+function handleFileSelect(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (input.files?.[0]) {
+    importFile.value = input.files[0]
+  }
+}
+
+function handleDrop(event: DragEvent) {
+  isDragging.value = false
+  const file = event.dataTransfer?.files?.[0]
+  if (file) {
+    importFile.value = file
+  }
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+async function startImport() {
+  if (!importFile.value) return
+  importLoading.value = true
+
+  try {
+    const form = new FormData()
+    form.append('file', importFile.value)
+
+    const result = await $fetch<{
+      total: number
+      processed: number
+      success: number
+      failed: number
+      errors: string[]
+    }>('/api/leads/import', {
+      method: 'POST',
+      body: form
+    })
+
+    importModalOpen.value = false
+
+    if (result.success > 0) {
+      refresh()
+      toast.add({
+        title: `${result.success} lead berhasil diimport`,
+        description: result.failed > 0 ? `${result.failed} baris gagal diproses.` : 'Semua data telah dianalisis oleh AI.',
+        color: 'success',
+        icon: 'i-lucide-check-circle'
+      })
+    }
+    else {
+      toast.add({
+        title: 'Import gagal',
+        description: result.errors[0] || 'Tidak ada lead yang berhasil diproses.',
+        color: 'error',
+        icon: 'i-lucide-x-circle'
+      })
+    }
+  }
+  catch (err: unknown) {
+    importModalOpen.value = false
+    const message = (err as { data?: { message?: string } })?.data?.message || 'Terjadi kesalahan saat import.'
+    toast.add({
+      title: 'Import gagal',
+      description: message,
+      color: 'error',
+      icon: 'i-lucide-x-circle'
+    })
+  }
+  finally {
+    importLoading.value = false
+  }
+}
+
+function downloadTemplate() {
+  window.location.href = '/api/leads/template'
+}
+
 const activeStatus = ref((route.query.status as string) || '')
 const activePipeline = ref((route.query.pipeline as string) || '')
 const currentPage = ref(Number(route.query.page) || 1)
@@ -161,6 +253,15 @@ function exportCSV() {
             v-if="total > 0"
             class="text-xs text-muted"
           >{{ total }} leads</span>
+          <UButton
+            icon="i-lucide-upload"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            @click="openImportModal"
+          >
+            Import
+          </UButton>
           <UButton
             icon="i-lucide-download"
             color="neutral"
@@ -331,4 +432,170 @@ function exportCSV() {
       </div>
     </template>
   </UDashboardPanel>
+
+  <!-- Import Modal -->
+  <UModal
+    v-model:open="importModalOpen"
+    title="Import Leads"
+    description="Upload file CSV atau Excel berisi data leads. Setiap baris akan dianalisis otomatis oleh AI."
+    :ui="{ footer: 'justify-between' }"
+  >
+    <template #body>
+      <div class="space-y-4">
+        <!-- Download template -->
+        <UAlert
+          color="info"
+          variant="subtle"
+          icon="i-lucide-info"
+          title="Format dokumen"
+          description="Download template untuk melihat format kolom yang dibutuhkan."
+        >
+          <template #description>
+            Download template untuk melihat format kolom yang dibutuhkan.
+            <UButton
+              variant="link"
+              color="primary"
+              size="xs"
+              icon="i-lucide-file-down"
+              class="ml-1 p-0"
+              @click="downloadTemplate"
+            >
+              Download template CSV
+            </UButton>
+          </template>
+        </UAlert>
+
+        <!-- File upload zone -->
+        <div
+          class="border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer"
+          :class="isDragging ? 'border-primary bg-primary/5' : 'border-default hover:border-primary/50'"
+          @click="importFileInput?.click()"
+          @dragover.prevent="isDragging = true"
+          @dragleave="isDragging = false"
+          @drop.prevent="handleDrop"
+        >
+          <input
+            ref="importFileInput"
+            type="file"
+            accept=".csv,.xlsx,.xls"
+            class="hidden"
+            @change="handleFileSelect"
+          >
+          <template v-if="importFile">
+            <UIcon
+              name="i-lucide-file-spreadsheet"
+              class="size-8 text-primary mx-auto mb-2"
+            />
+            <p class="font-medium text-highlighted">
+              {{ importFile.name }}
+            </p>
+            <p class="text-sm text-muted mt-0.5">
+              {{ formatFileSize(importFile.size) }} · Klik untuk ganti file
+            </p>
+          </template>
+          <template v-else>
+            <UIcon
+              name="i-lucide-upload-cloud"
+              class="size-8 text-muted mx-auto mb-2"
+            />
+            <p class="font-medium text-highlighted">
+              Drag & drop file di sini
+            </p>
+            <p class="text-sm text-muted mt-0.5">
+              atau klik untuk memilih file
+            </p>
+            <p class="text-xs text-muted mt-2">
+              Mendukung CSV (.csv) dan Excel (.xlsx, .xls) · Maks. 50 baris
+            </p>
+          </template>
+        </div>
+
+        <!-- Kolom yang dibutuhkan -->
+        <div>
+          <p class="text-xs font-medium text-muted uppercase tracking-wide mb-2">
+            Kolom yang dibutuhkan
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <UBadge
+              color="error"
+              variant="subtle"
+              size="sm"
+            >
+              name *
+            </UBadge>
+            <UBadge
+              color="error"
+              variant="subtle"
+              size="sm"
+            >
+              message *
+            </UBadge>
+            <UBadge
+              color="neutral"
+              variant="subtle"
+              size="sm"
+            >
+              source
+            </UBadge>
+            <UBadge
+              color="neutral"
+              variant="subtle"
+              size="sm"
+            >
+              email
+            </UBadge>
+            <UBadge
+              color="neutral"
+              variant="subtle"
+              size="sm"
+            >
+              phone
+            </UBadge>
+          </div>
+          <p class="text-xs text-muted mt-1">
+            * wajib diisi · Kolom lain opsional
+          </p>
+        </div>
+
+        <!-- Loading state -->
+        <div
+          v-if="importLoading"
+          class="flex items-center gap-3 p-3 rounded-lg bg-primary/5"
+        >
+          <UIcon
+            name="i-lucide-loader-circle"
+            class="size-5 text-primary animate-spin shrink-0"
+          />
+          <div>
+            <p class="text-sm font-medium text-highlighted">
+              Sedang memproses...
+            </p>
+            <p class="text-xs text-muted">
+              AI sedang menganalisis setiap lead. Mohon tunggu.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </template>
+
+    <template #footer>
+      <UButton
+        color="neutral"
+        variant="ghost"
+        :disabled="importLoading"
+        @click="importModalOpen = false"
+      >
+        Batal
+      </UButton>
+      <UButton
+        icon="i-lucide-upload"
+        :disabled="!importFile || importLoading"
+        :loading="importLoading"
+        @click="startImport"
+      >
+        {{ importLoading ? 'Memproses...' : 'Mulai Import' }}
+      </UButton>
+    </template>
+  </UModal>
 </template>
