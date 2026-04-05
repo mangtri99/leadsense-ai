@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Lead } from '~/shared/types'
+import type { Lead } from '#shared/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -62,32 +62,29 @@ async function startImport() {
     if (result.success > 0) {
       refresh()
       toast.add({
-        title: `${result.success} lead berhasil diimport`,
-        description: result.failed > 0 ? `${result.failed} baris gagal diproses.` : 'Semua data telah dianalisis oleh AI.',
+        title: `${result.success} lead${result.success > 1 ? 's' : ''} imported successfully`,
+        description: result.failed > 0 ? `${result.failed} row${result.failed > 1 ? 's' : ''} failed to process.` : 'All leads have been analyzed by AI.',
         color: 'success',
         icon: 'i-lucide-check-circle'
       })
-    }
-    else {
+    } else {
       toast.add({
-        title: 'Import gagal',
-        description: result.errors[0] || 'Tidak ada lead yang berhasil diproses.',
+        title: 'Import failed',
+        description: result.errors[0] || 'No leads were successfully processed.',
         color: 'error',
         icon: 'i-lucide-x-circle'
       })
     }
-  }
-  catch (err: unknown) {
+  } catch (err: unknown) {
     importModalOpen.value = false
-    const message = (err as { data?: { message?: string } })?.data?.message || 'Terjadi kesalahan saat import.'
+    const message = (err as { data?: { message?: string } })?.data?.message || 'An error occurred during import.'
     toast.add({
-      title: 'Import gagal',
+      title: 'Import failed',
       description: message,
       color: 'error',
       icon: 'i-lucide-x-circle'
     })
-  }
-  finally {
+  } finally {
     importLoading.value = false
   }
 }
@@ -437,7 +434,7 @@ function exportCSV() {
   <UModal
     v-model:open="importModalOpen"
     title="Import Leads"
-    description="Upload file CSV atau Excel berisi data leads. Setiap baris akan dianalisis otomatis oleh AI."
+    description="Upload a CSV or Excel file containing lead data. Each row will be automatically analyzed by AI."
     :ui="{ footer: 'justify-between' }"
   >
     <template #body>
@@ -447,11 +444,11 @@ function exportCSV() {
           color="info"
           variant="subtle"
           icon="i-lucide-info"
-          title="Format dokumen"
-          description="Download template untuk melihat format kolom yang dibutuhkan."
+          title="Document format"
+          description="Download the template to see the required column format."
         >
           <template #description>
-            Download template untuk melihat format kolom yang dibutuhkan.
+            Download the template to see the required column format.
             <UButton
               variant="link"
               color="primary"
@@ -460,7 +457,7 @@ function exportCSV() {
               class="ml-1 p-0"
               @click="downloadTemplate"
             >
-              Download template CSV
+              Download CSV template
             </UButton>
           </template>
         </UAlert>
@@ -490,7 +487,7 @@ function exportCSV() {
               {{ importFile.name }}
             </p>
             <p class="text-sm text-muted mt-0.5">
-              {{ formatFileSize(importFile.size) }} · Klik untuk ganti file
+              {{ formatFileSize(importFile.size) }} · Click to change file
             </p>
           </template>
           <template v-else>
@@ -499,21 +496,21 @@ function exportCSV() {
               class="size-8 text-muted mx-auto mb-2"
             />
             <p class="font-medium text-highlighted">
-              Drag & drop file di sini
+              Drag & drop your file here
             </p>
             <p class="text-sm text-muted mt-0.5">
-              atau klik untuk memilih file
+              or click to browse
             </p>
             <p class="text-xs text-muted mt-2">
-              Mendukung CSV (.csv) dan Excel (.xlsx, .xls) · Maks. 50 baris
+              Supports CSV (.csv) and Excel (.xlsx, .xls) · Max 50 rows
             </p>
           </template>
         </div>
 
-        <!-- Kolom yang dibutuhkan -->
+        <!-- Required columns -->
         <div>
           <p class="text-xs font-medium text-muted uppercase tracking-wide mb-2">
-            Kolom yang dibutuhkan
+            Required columns
           </p>
           <div class="flex flex-wrap gap-2">
             <UBadge
@@ -553,7 +550,7 @@ function exportCSV() {
             </UBadge>
           </div>
           <p class="text-xs text-muted mt-1">
-            * wajib diisi · Kolom lain opsional
+            * required · Other columns are optional
           </p>
         </div>
 
@@ -568,14 +565,13 @@ function exportCSV() {
           />
           <div>
             <p class="text-sm font-medium text-highlighted">
-              Sedang memproses...
+              Processing...
             </p>
             <p class="text-xs text-muted">
-              AI sedang menganalisis setiap lead. Mohon tunggu.
+              AI is analyzing each lead. Please wait.
             </p>
           </div>
         </div>
-
       </div>
     </template>
 
@@ -586,7 +582,7 @@ function exportCSV() {
         :disabled="importLoading"
         @click="importModalOpen = false"
       >
-        Batal
+        Cancel
       </UButton>
       <UButton
         icon="i-lucide-upload"
@@ -594,7 +590,7 @@ function exportCSV() {
         :loading="importLoading"
         @click="startImport"
       >
-        {{ importLoading ? 'Memproses...' : 'Mulai Import' }}
+        {{ importLoading ? 'Processing...' : 'Start Import' }}
       </UButton>
     </template>
   </UModal>
