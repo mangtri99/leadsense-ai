@@ -17,9 +17,8 @@ export default defineNuxtConfig({
     resendFrom: process.env.RESEND_FROM,
     resendAlertTo: process.env.RESEND_ALERT_TO,
     appUrl: process.env.APP_URL || 'http://localhost:3000',
-    // Data mode: true = pakai mock data lokal, false = pakai real external API
-    useMockData: process.env.USE_MOCK_DATA !== 'false',
-    apiBaseUrl: process.env.API_BASE_URL || ''
+    apiBaseUrl: process.env.API_BASE_URL || '',
+    apiTkey: process.env.API_TKEY || ''
   },
 
   routeRules: {

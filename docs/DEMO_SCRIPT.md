@@ -15,6 +15,7 @@ pnpm dev            # atau gunakan URL deployment
 Buka di browser:
 - Tab 1: `http://localhost:3000` (atau URL production)
 - Tab 2: Pesan inquiry siap di-copy (lihat di bawah)
+- Tab 3: File CSV import siap (download dari `/api/leads/template` atau siapkan manual)
 
 Login dengan:
 - Email: `demo@leadsense.ai`
@@ -36,14 +37,14 @@ Tunjukkan:
 
 ---
 
-### Step 2 — Input Lead Baru (Hot) (3 menit)
+### Step 2 — Input Lead Baru (Hot) (2.5 menit)
 
-**Klik**: "Input Lead Baru" atau navigasi ke `/leads/new`
+**Klik**: "New Lead" atau navigasi ke `/leads/new`
 
 Isi form:
-- **Nama**: `Pak Ahmad Rifai`
-- **Sumber**: `WhatsApp`
-- **Pesan** (copy-paste ini):
+- **Name**: `Pak Ahmad Rifai`
+- **Source**: `WhatsApp`
+- **Message** (copy-paste ini):
 
 ```
 Halo, saya mau book paket Labuan Bajo untuk 4 orang.
@@ -54,7 +55,7 @@ Bisa minta penawaran dan DP-nya?
 
 **Klik**: "Analisis dengan AI"
 
-*Tunjukkan loading state — "AI sedang menganalisis..."*
+*Tunjukkan loading state — AI sedang menganalisis...*
 
 > *"Dalam hitungan detik, Claude AI menganalisis pesan ini dari 4 dimensi: urgensi, kejelasan budget, tingkat intent, dan kelengkapan informasi."*
 
@@ -67,23 +68,21 @@ Bisa minta penawaran dan DP-nya?
 
 ---
 
-### Step 3 — Input Lead Kedua (Cold/Warm) (1.5 menit)
+### Step 3 — Import Leads dari CSV (2 menit)
 
-Klik "Input Lead Baru" lagi. Isi:
-- **Nama**: `Mbak Dewi`
-- **Sumber**: `Instagram`
-- **Pesan**:
+**Navigasi ke**: `/leads` → klik tombol **Import** di toolbar kanan atas
 
-```
-Pengen ke Bali deh kayaknya, tapi masih lama. Belum tau kapan, mungkin tahun depan. Kira-kira budget berapa ya?
-```
+> *"Selain input satu per satu, tim sales juga bisa import leads secara massal dari file CSV atau Excel — misalnya dari hasil export WhatsApp, form website, atau spreadsheet yang sudah ada."*
 
-Tunjukkan kontras:
-- Skor: **~30 — status Cold** ❄️
-- Analisis: info minim, tidak ada urgensi
-- Aksi yang direkomendasikan: kirim katalog, follow-up 3 hari
+**Di modal yang terbuka**:
+1. Klik **"Download CSV template"** — tunjukkan format kolom: `name, message, source, email, phone`
+2. Upload file CSV yang sudah disiapkan (berisi 3-5 lead sekaligus)
+3. Klik **"Start Import"**
 
-> *"Ini kontrasnya — lead yang sama-sama masuk tapi kualitasnya berbeda. AI langsung mengidentifikasi mana yang harus diprioritaskan."*
+*Tunjukkan loading — "AI is analyzing each lead. Please wait."*
+
+**Setelah selesai** — modal tertutup otomatis, muncul toast notifikasi:
+> *"3 leads imported successfully — semua dianalisis AI sekaligus. Tidak perlu input satu per satu."*
 
 ---
 
@@ -92,7 +91,7 @@ Tunjukkan kontras:
 **Navigasi ke**: `/leads`
 
 Tunjukkan:
-- Semua lead tersusun dengan skor visual
+- Semua lead tersusun dengan skor visual — termasuk yang baru diimport
 - **Klik filter "Hot"** → hanya tampil lead Hot
 
 > *"Sales bisa langsung fokus ke lead Hot terlebih dahulu. Tidak perlu baca semua pesan satu per satu."*
@@ -106,7 +105,7 @@ Tunjukkan:
 Di halaman detail, tunjukkan:
 - Skor besar di kiri, analisis lengkap
 - Info terstruktur: destinasi, budget, pax, tanggal
-- Pesan asli lead
+- Rekomendasi hotel yang relevan (dipilih AI dari database)
 - Draft balasan yang sudah siap
 
 **Demo copy draft**:
@@ -116,7 +115,7 @@ Di halaman detail, tunjukkan:
 
 ### Step 6 — Kembali ke Dashboard (30 detik)
 
-Navigasi ke `/` — tunjukkan stats terupdate dengan lead baru yang baru saja diinput.
+Navigasi ke `/` — tunjukkan stats terupdate dengan lead baru yang baru saja diinput dan diimport.
 
 > *"Dashboard terupdate real-time. Manajer sales bisa pantau pipeline kapan saja."*
 
@@ -127,8 +126,9 @@ Navigasi ke `/` — tunjukkan stats terupdate dengan lead baru yang baru saja di
 1. **< 5 detik** — dari pesan masuk ke scoring lengkap
 2. **4 dimensi scoring** — bukan black box, bisa dijelaskan
 3. **Draft balasan personal** — sales tidak perlu mengetik dari nol
-4. **Prioritisasi otomatis** — tidak ada lagi lead Hot yang terlewat
-5. **Stack**: Nuxt 3 + Claude AI (Anthropic) + PostgreSQL (Neon)
+4. **Import massal** — upload CSV/Excel, semua lead langsung dianalisis AI sekaligus
+5. **Prioritisasi otomatis** — tidak ada lagi lead Hot yang terlewat
+6. **Stack**: Nuxt 4 + Claude AI (Anthropic) + PostgreSQL (Neon)
 
 ---
 
@@ -141,6 +141,7 @@ Navigasi ke `/` — tunjukkan stats terupdate dengan lead baru yang baru saja di
 | "Bisa integrasi WhatsApp?" | "Ada di roadmap v1.2 — WhatsApp Business API untuk auto-capture inquiry masuk." |
 | "Bagaimana kalau AI-nya salah?" | "Ada fallback — jika AI gagal atau hasilnya tidak akurat, sales bisa edit manual. Draft balasan juga bisa diedit sebelum dikirim." |
 | "Skalabilitas?" | "Neon PostgreSQL serverless, Claude API sudah production-ready. Bisa handle ratusan lead per hari." |
+| "Bisa import dari sistem lain?" | "Ya — format CSV/Excel universal. Bisa export dari WhatsApp CRM, Google Sheets, atau form website lalu import langsung ke LeadSense." |
 
 ---
 
@@ -148,7 +149,8 @@ Navigasi ke `/` — tunjukkan stats terupdate dengan lead baru yang baru saja di
 
 Jika internet bermasalah saat demo:
 1. Gunakan data seed yang sudah ada — tunjukkan list lead dan detail tanpa input baru
-2. Tampilkan screenshot/video recording yang sudah disiapkan
-3. Fokus ke UX demo: filter, detail lead, copy draft
+2. Untuk demo import: siapkan file CSV lokal dan tunjukkan modal upload (bisa skip proses AI jika offline)
+3. Tampilkan screenshot/video recording yang sudah disiapkan
+4. Fokus ke UX demo: filter, detail lead, copy draft
 
 **Video backup**: Rekam demo end-to-end dan simpan offline sebelum hari H.

@@ -31,7 +31,8 @@
 - 🤖 Scoring otomatis 0-100 untuk setiap lead masuk
 - 🔥 Klasifikasi instan: Hot / Warm / Cold / Nurture
 - ✍️ Draft balasan personal siap pakai
-- 📦 Rekomendasi paket yang relevan
+- 📦 Rekomendasi hotel yang relevan berdasarkan destinasi
+- 📥 Import bulk lead dari file CSV atau Excel
 - 📊 Dashboard analitik tim sales
 
 **Visual**: Screenshot dashboard LeadSense dengan lead Hot yang highlight
@@ -62,12 +63,13 @@
 **Visual**: Logo grid
 
 ```
-Frontend + Backend : Nuxt 3 (Vue 3)
+Frontend + Backend : Nuxt 4 (Vue 3)
 AI Engine          : Claude API (Anthropic)
 Database           : PostgreSQL (Neon Serverless)
 ORM                : Drizzle ORM
-Styling            : Tailwind CSS + Nuxt UI
+Styling            : Tailwind CSS + Nuxt UI v4
 Auth               : nuxt-auth-utils
+Import/Export      : SheetJS (xlsx) — CSV & Excel
 ```
 
 **Highlight**: Monolithic architecture — cepat dikembangkan, mudah di-deploy
@@ -95,6 +97,7 @@ Jalankan demo sesuai `DEMO_SCRIPT.md`
 | Waktu analisis per lead | 5-10 menit manual | < 5 detik otomatis |
 | Waktu follow-up/hari | 2-3 jam | ~30 menit |
 | Lead Hot yang terlewat | Sering | Hampir tidak ada |
+| Onboarding lead massal | Input satu per satu | Import CSV/Excel sekaligus |
 | Conversion rate | Baseline | Target +30-40% |
 
 **Quote fiktif (bisa diganti testimoni nyata)**:
@@ -111,9 +114,13 @@ Jalankan demo sesuai `DEMO_SCRIPT.md`
 ```
 Sekarang (v1.0)
 └── Lead scoring AI, dashboard, draft balasan
+└── Rekomendasi hotel otomatis
+└── Import leads dari CSV / Excel
+└── Export leads ke CSV
 
 v1.1 — 1-2 bulan
-└── Follow-up history, export Excel, notifikasi Hot lead
+└── Follow-up history, notifikasi Hot lead real-time
+└── Filter & analytics lanjutan
 
 v1.2 — 3-5 bulan
 └── WhatsApp Business API, multi-user dengan role admin/sales

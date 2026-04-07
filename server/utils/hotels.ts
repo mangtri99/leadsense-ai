@@ -1,5 +1,3 @@
-import hotelsData from '../../hotels.json'
-
 export interface HotelRaw {
   id: string
   name: string
@@ -27,84 +25,57 @@ export interface HotelRaw {
 
 const KEY_AMENITIES = ['Free WiFi', 'Pool', 'pool', 'Fitness', 'Breakfast', 'Free parking', 'Airport', 'Spa', 'Restaurant']
 
-const mockHotels = hotelsData as HotelRaw[]
-
-// --- Mock implementations ---
-
-function mockGetByDestination(destination: string, limit: number): HotelRaw[] {
-  const query = destination.toLowerCase().trim()
-  if (!query) return []
-
-  return mockHotels
-    .filter((hotel) => {
-      if (!hotel.hasRoomAvailability) return false
-      const d = hotel.destinationDetails
-      const fields = [
-        d.city,
-        d.country,
-        d.displayName,
-        ...(d.destinations || []),
-        ...(d.keywords || [])
-      ].map(s => s?.toLowerCase() || '')
-      return fields.some(f => f.includes(query) || query.includes(f.split(',')[0]?.trim() || ''))
-    })
-    .sort((a, b) => b.popularity - a.popularity)
-    .slice(0, limit)
+function getDefaultDates() {
+  const checkIn = new Date()
+  checkIn.setDate(checkIn.getDate() + 14)
+  const checkOut = new Date(checkIn)
+  checkOut.setDate(checkOut.getDate() + 3)
+  return {
+    checkInDate: checkIn.toISOString().slice(0, 10),
+    checkOutDate: checkOut.toISOString().slice(0, 10)
+  }
 }
 
-function mockGetById(ids: string[]): HotelRaw[] {
-  return mockHotels.filter(h => ids.includes(h.id))
+async function resolveDestinationName(query: string, baseUrl: string, tkey: string): Promise<string> {
+  try {
+    const res = await $fetch<{ result: { displayFullName: string }[] }>(`${baseUrl}/api/search/destinations/suggestions`, {
+      method: 'POST',
+      headers: { 'x-tkey': tkey, 'Content-Type': 'application/json' },
+      body: { query, count: 1, filters: { hasAccommodation: true } }
+    })
+    return res?.result?.[0]?.displayFullName || query
+  } catch {
+    return query
+  }
+}
+
+async function fetchHotelsFromApi(destinationFullName: string, limit: number, baseUrl: string, tkey: string): Promise<HotelRaw[]> {
+  const { checkInDate, checkOutDate } = getDefaultDates()
+  const res = await $fetch<{ result: HotelRaw[] }>(`${baseUrl}/api/search/accommodations/destination`, {
+    method: 'POST',
+    headers: { 'x-tkey': tkey, 'Content-Type': 'application/json' },
+    body: {
+      destinationFullName,
+      page: { size: limit, current: 1 },
+      availabilityRequest: {
+        checkInDate,
+        checkOutDate,
+        currency: 'USD',
+        guestsCount: { adult: 2, child: 0, infant: 0 },
+        roomsCount: 1
+      },
+      filters: {}
+    }
+  })
+  return Array.isArray(res?.result) ? res.result : []
 }
 
 // --- Public async API ---
 
 export async function getHotelsByDestination(destination: string, limit = 10): Promise<HotelRaw[]> {
   const config = useRuntimeConfig()
-
-  if (config.useMockData) {
-    return mockGetByDestination(destination, limit)
-  }
-
-  // Real API mode
-  if (!config.apiBaseUrl) {
-    console.warn('[hotels] API_BASE_URL tidak dikonfigurasi, fallback ke mock data')
-    return mockGetByDestination(destination, limit)
-  }
-
-  try {
-    const response = await $fetch<HotelRaw[]>(`${config.apiBaseUrl}/hotels`, {
-      query: { destination, limit }
-    })
-    return Array.isArray(response) ? response : []
-  } catch (err) {
-    console.error('[hotels] Real API gagal, fallback ke mock data:', err)
-    return mockGetByDestination(destination, limit)
-  }
-}
-
-export async function getHotelsById(ids: string[]): Promise<HotelRaw[]> {
-  if (!ids.length) return []
-
-  const config = useRuntimeConfig()
-
-  if (config.useMockData) {
-    return mockGetById(ids)
-  }
-
-  if (!config.apiBaseUrl) {
-    console.warn('[hotels] API_BASE_URL tidak dikonfigurasi, fallback ke mock data')
-    return mockGetById(ids)
-  }
-
-  try {
-    const response = await $fetch<HotelRaw[]>(`${config.apiBaseUrl}/hotels`, {
-      query: { ids: ids.join(',') }
-    })
-    return Array.isArray(response) ? response : []
-  } catch (err) {
-    console.error('[hotels] Real API gagal, fallback ke mock data:', err)
-    return mockGetById(ids)
-  }
+  const destinationFullName = await resolveDestinationName(destination, config.apiBaseUrl, config.apiTkey)
+  return fetchHotelsFromApi(destinationFullName, limit, config.apiBaseUrl, config.apiTkey)
 }
 
 export function formatHotelForPrompt(hotel: HotelRaw, index: number): string {
