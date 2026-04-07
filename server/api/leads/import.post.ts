@@ -74,7 +74,7 @@ async function processLead(row: ParsedRow, db: ReturnType<typeof useDb>): Promis
 
     let aiRecommendedHotels: string | null = null
     if (analysis.destination) {
-      const candidates = await getHotelsByDestination(analysis.destination, 10)
+      const candidates = await getHotelsByDestination(analysis.destination, 10, analysis.paxCount, analysis.travelDate)
       const selections = await selectHotelsWithAI(
         { destination: analysis.destination, budget: analysis.budget, paxCount: analysis.paxCount, travelDate: analysis.travelDate, rawMessage: row.message },
         candidates

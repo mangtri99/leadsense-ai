@@ -43,7 +43,7 @@ export default defineEventHandler(async (event) => {
   // AI hotel selection based on extracted profile
   let aiRecommendedHotels: string | null = null
   if (analysis.destination) {
-    const candidates = await getHotelsByDestination(analysis.destination, 10)
+    const candidates = await getHotelsByDestination(analysis.destination, 10, analysis.paxCount, analysis.travelDate)
     const selections = await selectHotelsWithAI(
       { destination: analysis.destination, budget: analysis.budget, paxCount: analysis.paxCount, travelDate: analysis.travelDate, rawMessage },
       candidates

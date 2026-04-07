@@ -74,7 +74,7 @@ export default defineEventHandler(async (event) => {
   // AI hotel selection — re-run if destination or profile changed
   let aiRecommendedHotelsUpdate: { aiRecommendedHotels: string | null } = { aiRecommendedHotels: lead.aiRecommendedHotels ?? null }
   if (effectiveDestination) {
-    const candidates = await getHotelsByDestination(effectiveDestination, 10)
+    const candidates = await getHotelsByDestination(effectiveDestination, 10, effectivePax, effectiveDate)
     const effectiveBudget = analysis.budget || lead.budget
     const effectivePax = analysis.paxCount || lead.paxCount
     const effectiveDate = analysis.travelDate || lead.travelDate

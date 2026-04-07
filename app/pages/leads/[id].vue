@@ -188,6 +188,10 @@ interface Hotel {
   displayName: string
   isRefundable: boolean
   amenities: string[]
+  provider: string
+  providerPropertyId: string
+  contentProviderPropertyId: string
+  productId: string
 }
 
 interface HotelSelection { id: string, name: string, reason: string }
@@ -216,6 +220,39 @@ const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/h
 
 function hotelReason(hotelId: string): string | null {
   return aiSelections.value.find(s => s.id === hotelId)?.reason ?? null
+}
+
+const config = useRuntimeConfig()
+
+function buildHotelDetailUrl(hotel: Hotel): string {
+  const base = config.public.playTravelBaseUrl
+  const slug = hotel.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  const hotelCode = hotel.providerPropertyId || hotel.contentProviderPropertyId
+
+  // Resolve check-in/out from lead's travelDate
+  let checkIn: Date
+  const parsed = lead.value?.travelDate ? new Date(lead.value.travelDate) : NaN
+  checkIn = !isNaN(Number(parsed)) ? parsed as Date : (() => { const d = new Date(); d.setDate(d.getDate() + 14); return d })()
+  const checkOut = new Date(checkIn)
+  checkOut.setDate(checkOut.getDate() + 3)
+
+  const fmt = (d: Date) => d.toISOString().slice(0, 10)
+  const adults = lead.value?.paxCount || 2
+
+  const params = new URLSearchParams({
+    HotelCode: hotelCode,
+    CheckIn: fmt(checkIn),
+    CheckOut: fmt(checkOut),
+    CurrencyCode: hotel.currency,
+    Provider: hotel.provider,
+    contentItemId: hotel.productId,
+    Adults: String(adults),
+    Children: '0',
+    Infants: '0',
+    Rooms: '1'
+  })
+
+  return `${base}/accommodation/detail/${slug}?${params.toString()}`
 }
 </script>
 
@@ -794,6 +831,20 @@ function hotelReason(hotelId: string): string | null {
                   </span>
                   <span class="text-xs text-muted">/night</span>
                 </div>
+              </div>
+              <div class="px-3 pb-3">
+                <UButton
+                  :to="buildHotelDetailUrl(hotel)"
+                  target="_blank"
+                  size="xs"
+                  color="primary"
+                  variant="subtle"
+                  icon="i-lucide-external-link"
+                  trailing
+                  block
+                >
+                  Detail
+                </UButton>
               </div>
             </UCard>
           </div>

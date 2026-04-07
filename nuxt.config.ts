@@ -9,6 +9,9 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   runtimeConfig: {
+    public: {
+      playTravelBaseUrl: process.env.API_BASE_URL || 'https://www.playtravel.com'
+    },
     databaseUrl: process.env.DATABASE_URL,
     sessionPassword: process.env.NUXT_SESSION_PASSWORD,
     anthropicApiKey: process.env.ANTHROPIC_API_KEY,
