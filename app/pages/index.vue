@@ -4,6 +4,7 @@ const { user } = useUserSession()
 const isAdmin = computed(() => (user.value as { role?: string } | null)?.role === 'admin')
 
 const { data: stats } = await useFetch('/api/dashboard/stats')
+const { data: charts } = await useFetch('/api/dashboard/charts')
 
 interface TeamStat {
   id: number
@@ -229,6 +230,51 @@ const statCards = computed(() => [
             </div>
           </UCard>
         </div>
+
+        <!-- Charts Row -->
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          <!-- Leads Over Time -->
+          <UCard class="xl:col-span-2">
+            <template #header>
+              <p class="font-semibold text-highlighted">
+                Leads Over Time <span class="text-xs font-normal text-muted ml-1">(last 30 days)</span>
+              </p>
+            </template>
+            <ChartLeadsOverTime
+              v-if="charts?.leadsOverTime?.length"
+              :data="charts.leadsOverTime"
+            />
+            <div
+              v-else
+              class="h-40 flex items-center justify-center text-sm text-muted"
+            >
+              No data yet
+            </div>
+          </UCard>
+
+          <!-- Win Rate -->
+          <UCard>
+            <template #header>
+              <p class="font-semibold text-highlighted">
+                Win Rate
+              </p>
+            </template>
+            <ChartWinRate
+              :closed-won="charts?.winRate?.closed_won ?? 0"
+              :closed-lost="charts?.winRate?.closed_lost ?? 0"
+            />
+          </UCard>
+        </div>
+
+        <!-- Top Destinations -->
+        <UCard v-if="charts?.topDestinations?.length">
+          <template #header>
+            <p class="font-semibold text-highlighted">
+              Top Destinations
+            </p>
+          </template>
+          <ChartTopDestinations :data="charts.topDestinations" />
+        </UCard>
 
         <!-- Team Leaderboard (admin only) -->
         <UCard v-if="isAdmin && teamStats?.length">

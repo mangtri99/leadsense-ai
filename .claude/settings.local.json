@@ -18,7 +18,8 @@
       "Bash(pnpm typecheck:*)",
       "Bash(pnpm db:push:*)",
       "Bash(grep:*)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "Bash(npm install:*)"
     ]
   }
 }
