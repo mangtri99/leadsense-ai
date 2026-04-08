@@ -1,8 +1,15 @@
 <script setup lang="ts">
-import type { Lead } from '#shared/types'
+import type { Lead, User } from '#shared/types'
 
 const route = useRoute()
 const router = useRouter()
+const { user: currentUser } = useUserSession()
+const isAdmin = computed(() => (currentUser.value as { role?: string } | null)?.role === 'admin')
+
+const { data: salesUsers } = await useFetch<User[]>('/api/users', {
+  immediate: isAdmin.value,
+  transform: users => users.filter(u => u.role === 'sales')
+})
 
 // --- Import modal state ---
 const importModalOpen = ref(false)
@@ -93,14 +100,16 @@ function downloadTemplate() {
   window.location.href = '/api/leads/template'
 }
 
-const activeStatus = ref((route.query.status as string) || '')
-const activePipeline = ref((route.query.pipeline as string) || '')
+const activeStatus = ref((route.query.status as string) || 'all')
+const activePipeline = ref((route.query.pipeline as string) || 'all')
+const activeAssignee = ref(route.query.assignedTo ? String(route.query.assignedTo) : 'all')
 const currentPage = ref(Number(route.query.page) || 1)
 
 function buildQuery(overrides: Record<string, unknown> = {}) {
   return {
-    ...(activeStatus.value ? { status: activeStatus.value } : {}),
-    ...(activePipeline.value ? { pipeline: activePipeline.value } : {}),
+    ...(activeStatus.value !== 'all' ? { status: activeStatus.value } : {}),
+    ...(activePipeline.value !== 'all' ? { pipeline: activePipeline.value } : {}),
+    ...(activeAssignee.value !== 'all' ? { assignedTo: activeAssignee.value } : {}),
     page: currentPage.value,
     ...overrides
   }
@@ -112,6 +121,11 @@ watch(activeStatus, () => {
 })
 
 watch(activePipeline, () => {
+  currentPage.value = 1
+  router.replace({ query: buildQuery({ page: 1 }) })
+})
+
+watch(activeAssignee, () => {
   currentPage.value = 1
   router.replace({ query: buildQuery({ page: 1 }) })
 })
@@ -128,8 +142,9 @@ const { data, pending, refresh } = await useFetch<{
   totalPages: number
 }>('/api/leads', {
   query: computed(() => ({
-    ...(activeStatus.value ? { status: activeStatus.value } : {}),
-    ...(activePipeline.value ? { pipeline: activePipeline.value } : {}),
+    ...(activeStatus.value !== 'all' ? { status: activeStatus.value } : {}),
+    ...(activePipeline.value !== 'all' ? { pipeline: activePipeline.value } : {}),
+    ...(activeAssignee.value !== 'all' ? { assignedTo: activeAssignee.value } : {}),
     page: currentPage.value,
     limit: 20
   }))
@@ -140,7 +155,7 @@ const totalPages = computed(() => data.value?.totalPages ?? 1)
 const total = computed(() => data.value?.total ?? 0)
 
 const statusOptions = [
-  { label: 'All', value: '' },
+  { label: 'All', value: 'all' },
   { label: 'Hot', value: 'Hot' },
   { label: 'Warm', value: 'Warm' },
   { label: 'Cold', value: 'Cold' },
@@ -148,7 +163,7 @@ const statusOptions = [
 ]
 
 const pipelineOptions = [
-  { label: 'All Stages', value: '', icon: 'i-lucide-layers' },
+  { label: 'All Stages', value: 'all', icon: 'i-lucide-layers' },
   { label: 'New', value: 'new', icon: 'i-lucide-inbox' },
   { label: 'Contacted', value: 'contacted', icon: 'i-lucide-phone' },
   { label: 'Negotiating', value: 'negotiating', icon: 'i-lucide-handshake' },
@@ -183,8 +198,8 @@ function timeAgo(date: string | Date) {
 
 function exportCSV() {
   const params = new URLSearchParams()
-  if (activeStatus.value) params.set('status', activeStatus.value)
-  if (activePipeline.value) params.set('pipeline', activePipeline.value)
+  if (activeStatus.value !== 'all') params.set('status', activeStatus.value)
+  if (activePipeline.value !== 'all') params.set('pipeline', activePipeline.value)
   const qs = params.toString()
   window.location.href = `/api/leads/export${qs ? `?${qs}` : ''}`
 }
@@ -213,35 +228,46 @@ function exportCSV() {
 
       <UDashboardToolbar>
         <template #left>
-          <div class="flex flex-col gap-3 py-2">
+          <div class="flex flex-col gap-2 py-2">
             <!-- AI Score filter -->
-            <div class="flex items-center gap-2 flex-wrap">
+            <div class="flex items-center gap-2">
               <span class="text-xs text-muted w-12 shrink-0">Score</span>
-              <UButton
-                v-for="opt in statusOptions"
-                :key="opt.value"
-                :variant="activeStatus === opt.value ? 'solid' : 'ghost'"
-                :color="activeStatus === opt.value ? 'primary' : 'neutral'"
-                size="sm"
-                @click="activeStatus = opt.value"
-              >
-                {{ opt.label }}
-              </UButton>
+              <div class="flex items-center gap-1 overflow-x-auto">
+                <UButton
+                  v-for="opt in statusOptions"
+                  :key="opt.value"
+                  :variant="activeStatus === opt.value ? 'solid' : 'ghost'"
+                  :color="activeStatus === opt.value ? 'primary' : 'neutral'"
+                  size="sm"
+                  class="shrink-0"
+                  @click="activeStatus = opt.value"
+                >
+                  {{ opt.label }}
+                </UButton>
+              </div>
             </div>
             <!-- Pipeline Stage filter -->
-            <div class="flex items-center gap-2 flex-wrap">
+            <div class="flex items-center gap-2">
               <span class="text-xs text-muted w-12 shrink-0">Stage</span>
-              <UButton
-                v-for="opt in pipelineOptions"
-                :key="opt.value"
-                :icon="opt.icon"
-                :variant="activePipeline === opt.value ? 'solid' : 'ghost'"
-                :color="activePipeline === opt.value ? 'neutral' : 'neutral'"
+              <USelect
+                v-model="activePipeline"
+                :items="pipelineOptions.map(o => ({ label: o.label, value: o.value }))"
                 size="sm"
-                @click="activePipeline = opt.value"
-              >
-                {{ opt.label }}
-              </UButton>
+                class="w-40"
+              />
+            </div>
+            <!-- Assignee filter (admin only) -->
+            <div
+              v-if="isAdmin && salesUsers?.length"
+              class="flex items-center gap-2"
+            >
+              <span class="text-xs text-muted w-12 shrink-0">Assignee</span>
+              <USelect
+                v-model="activeAssignee"
+                :items="[{ label: 'All', value: 'all' }, ...(salesUsers ?? []).map(u => ({ label: u.name, value: String(u.id) }))]"
+                size="sm"
+                class="w-40"
+              />
             </div>
           </div>
         </template>
@@ -297,7 +323,7 @@ function exportCSV() {
             No leads yet
           </p>
           <p class="text-muted text-sm mt-1">
-            {{ activeStatus || activePipeline
+            {{ activeStatus !== 'all' || activePipeline !== 'all' || activeAssignee !== 'all'
               ? `No leads matching the selected filters`
               : 'Start by adding your first lead' }}
           </p>
@@ -401,6 +427,12 @@ function exportCSV() {
                         name="i-lucide-calendar"
                         class="size-3 inline mr-0.5"
                       />{{ lead.travelDate }}
+                    </span>
+                    <span v-if="(lead as Lead).assignedToName">
+                      <UIcon
+                        name="i-lucide-user-check"
+                        class="size-3 inline mr-0.5"
+                      />{{ (lead as Lead).assignedToName }}
                     </span>
                     <span class="ml-auto">{{ timeAgo(lead.createdAt) }}</span>
                   </div>

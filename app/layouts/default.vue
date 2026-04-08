@@ -4,6 +4,8 @@ import type { NavigationMenuItem } from '@nuxt/ui'
 const toast = useToast()
 const open = ref(false)
 const { hotLeadCount } = useDashboard()
+const { user } = useUserSession()
+const isAdmin = computed(() => (user.value as { role?: string } | null)?.role === 'admin')
 
 // SSE — real-time notifications for new Hot leads
 onMounted(() => {
@@ -30,33 +32,46 @@ onMounted(() => {
   onUnmounted(() => es.close())
 })
 
-const links = [[{
-  label: 'Dashboard',
-  icon: 'i-lucide-layout-dashboard',
-  to: '/',
-  onSelect: () => { open.value = false }
-}, {
-  label: 'Leads',
-  icon: 'i-lucide-users',
-  to: '/leads',
-  onSelect: () => { open.value = false }
-}, {
-  label: 'New Lead',
-  icon: 'i-lucide-plus-circle',
-  to: '/leads/new',
-  onSelect: () => { open.value = false }
-}], [{
+const mainLinks = computed<NavigationMenuItem[]>(() => [
+  {
+    label: 'Dashboard',
+    icon: 'i-lucide-layout-dashboard',
+    to: '/',
+    onSelect: () => { open.value = false }
+  },
+  {
+    label: 'Leads',
+    icon: 'i-lucide-users',
+    to: '/leads',
+    onSelect: () => { open.value = false }
+  },
+  {
+    label: 'New Lead',
+    icon: 'i-lucide-plus-circle',
+    to: '/leads/new',
+    onSelect: () => { open.value = false }
+  },
+  ...(isAdmin.value
+    ? [{
+        label: 'Team',
+        icon: 'i-lucide-shield-check',
+        to: '/admin/users',
+        onSelect: () => { open.value = false }
+      }]
+    : [])
+])
+
+const bottomLinks: NavigationMenuItem[] = [{
   label: 'Documentation',
   icon: 'i-lucide-book-open',
   to: 'https://ui.nuxt.com',
   target: '_blank'
-}]] satisfies NavigationMenuItem[][]
+}]
 
-const groups = computed(() => [{
-  id: 'links',
-  label: 'Navigation',
-  items: links.flat()
-}])
+// const links = computed(() => [mainLinks.value, bottomLinks])
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const groups = computed(() => [{ id: 'links', label: 'Navigation', items: [...mainLinks.value, ...bottomLinks] as any }])
 
 onMounted(() => {
   const cookie = useCookie('cookie-consent')
@@ -111,7 +126,7 @@ onMounted(() => {
 
         <UNavigationMenu
           :collapsed="collapsed"
-          :items="links[0]"
+          :items="mainLinks"
           orientation="vertical"
           tooltip
           popover
@@ -119,7 +134,7 @@ onMounted(() => {
 
         <UNavigationMenu
           :collapsed="collapsed"
-          :items="links[1]"
+          :items="bottomLinks"
           orientation="vertical"
           tooltip
           class="mt-auto"

@@ -4,6 +4,8 @@ import type { Lead } from '#shared/types'
 
 const route = useRoute()
 const toast = useToast()
+const { user: currentUser } = useUserSession()
+const isAdmin = computed(() => (currentUser.value as { role?: string } | null)?.role === 'admin')
 
 const { data: lead, error, refresh: refreshLead } = await useFetch<Lead>(`/api/leads/${route.params.id}`)
 
@@ -171,6 +173,26 @@ async function submitReply() {
   }
 }
 
+// ── Lead Assignment ──────────────────────────────────────
+const { data: salesUsers } = await useFetch<{ id: number, name: string, role: string }[]>('/api/users', {
+  immediate: isAdmin.value,
+  transform: users => users.filter(u => u.role === 'sales')
+})
+
+const assigningLead = ref(false)
+async function assignLead(userId: number | null) {
+  assigningLead.value = true
+  try {
+    await $fetch(`/api/leads/${route.params.id}/assign`, { method: 'PATCH', body: { assignedToId: userId } })
+    await refreshLead()
+    toast.add({ title: userId ? 'Lead assigned' : 'Assignment removed', color: 'success', icon: 'i-lucide-check-circle' })
+  } catch {
+    toast.add({ title: 'Failed to update assignment', color: 'error', icon: 'i-lucide-alert-circle' })
+  } finally {
+    assigningLead.value = false
+  }
+}
+
 // ── Hotel Recommendations ─────────────────────────────────
 interface Hotel {
   id: string
@@ -230,9 +252,14 @@ function buildHotelDetailUrl(hotel: Hotel): string {
   const hotelCode = hotel.providerPropertyId || hotel.contentProviderPropertyId
 
   // Resolve check-in/out from lead's travelDate
-  let checkIn: Date
   const parsed = lead.value?.travelDate ? new Date(lead.value.travelDate) : NaN
-  checkIn = !isNaN(Number(parsed)) ? parsed as Date : (() => { const d = new Date(); d.setDate(d.getDate() + 14); return d })()
+  const checkIn = !isNaN(Number(parsed))
+    ? parsed as Date
+    : (() => {
+        const d = new Date()
+        d.setDate(d.getDate() + 14)
+        return d
+      })()
   const checkOut = new Date(checkIn)
   checkOut.setDate(checkOut.getDate() + 3)
 
@@ -352,6 +379,38 @@ function buildHotelDetailUrl(hotel: Hotel): string {
                       >
                         {{ currentStage.label }}
                       </UButton>
+                    </UDropdownMenu>
+                  </div>
+
+                  <!-- Assignee -->
+                  <div class="flex items-center gap-2 mt-1">
+                    <UIcon
+                      name="i-lucide-user-check"
+                      class="size-3.5 text-muted shrink-0"
+                    />
+                    <span
+                      v-if="lead.assignedToName"
+                      class="text-xs text-muted"
+                    >Assigned to <span class="text-highlighted font-medium">{{ lead.assignedToName }}</span></span>
+                    <span
+                      v-else
+                      class="text-xs text-muted"
+                    >Unassigned</span>
+
+                    <UDropdownMenu
+                      v-if="isAdmin"
+                      :items="[
+                        { label: 'Unassign', icon: 'i-lucide-user-x', onSelect: () => assignLead(null) },
+                        ...(salesUsers ?? []).map(u => ({ label: u.name, icon: 'i-lucide-user', onSelect: () => assignLead(u.id) }))
+                      ]"
+                    >
+                      <UButton
+                        size="xs"
+                        color="neutral"
+                        variant="ghost"
+                        icon="i-lucide-pencil"
+                        :loading="assigningLead"
+                      />
                     </UDropdownMenu>
                   </div>
 

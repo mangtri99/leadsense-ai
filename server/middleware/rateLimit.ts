@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   if (!event.path.startsWith('/api/leads') || event.method !== 'POST') return
 
   const session = await getUserSession(event)
-  const userId = session?.user?.id
+  const userId = (session?.user as { id?: number } | undefined)?.id
   if (!userId) return // akan di-handle oleh requireUserSession di route handler
 
   const storage = useStorage('cache')

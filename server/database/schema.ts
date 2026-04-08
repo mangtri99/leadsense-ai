@@ -5,6 +5,7 @@ export const users = pgTable('users', {
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
   password: text('password').notNull(),
+  role: text('role').notNull().default('admin'), // 'admin' | 'sales'
   createdAt: timestamp('created_at').defaultNow().notNull()
 })
 
@@ -25,6 +26,7 @@ export const leads = pgTable('leads', {
   email: text('email'),
   phone: text('phone'),
   aiRecommendedHotels: text('ai_recommended_hotels'), // JSON: [{ id, name, reason }]
+  assignedToId: integer('assigned_to_id').references(() => users.id),
   lastActivityAt: timestamp('last_activity_at').defaultNow().notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()

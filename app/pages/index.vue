@@ -1,7 +1,21 @@
 <script setup lang="ts">
 const { isNotificationsSlideoverOpen, hotLeadCount } = useDashboard()
+const { user } = useUserSession()
+const isAdmin = computed(() => (user.value as { role?: string } | null)?.role === 'admin')
 
 const { data: stats } = await useFetch('/api/dashboard/stats')
+
+interface TeamStat {
+  id: number
+  name: string
+  total_assigned: number
+  closed_won: number
+  hot_leads: number
+  new_leads: number
+}
+const { data: teamStats } = await useFetch<TeamStat[]>('/api/dashboard/team-stats', {
+  immediate: isAdmin.value
+})
 
 const statCards = computed(() => [
   {
@@ -215,6 +229,51 @@ const statCards = computed(() => [
             </div>
           </UCard>
         </div>
+
+        <!-- Team Leaderboard (admin only) -->
+        <UCard v-if="isAdmin && teamStats?.length">
+          <template #header>
+            <div class="flex items-center justify-between">
+              <p class="font-semibold text-highlighted">
+                Sales Leaderboard
+              </p>
+              <NuxtLink
+                to="/admin/users"
+                class="text-xs text-primary hover:underline"
+              >
+                Manage team
+              </NuxtLink>
+            </div>
+          </template>
+          <div class="space-y-3">
+            <div
+              v-for="(member, index) in teamStats"
+              :key="member.id"
+              class="flex items-center gap-3"
+            >
+              <span class="text-sm font-bold text-muted w-5 text-center">{{ index + 1 }}</span>
+              <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-primary text-sm shrink-0">
+                {{ member.name.charAt(0).toUpperCase() }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-highlighted truncate">
+                  {{ member.name }}
+                </p>
+                <p class="text-xs text-muted">
+                  {{ member.total_assigned }} assigned · {{ member.hot_leads }} hot
+                </p>
+              </div>
+              <div class="text-right">
+                <p class="text-sm font-bold text-green-500">
+                  {{ member.closed_won }}
+                </p>
+                <p class="text-xs text-muted">
+                  closed
+                </p>
+              </div>
+            </div>
+          </div>
+        </UCard>
 
         <!-- Quick Actions -->
         <UCard>

@@ -15,9 +15,19 @@ export interface Lead {
   email: string | null
   phone: string | null
   aiRecommendedHotels: string | null
+  assignedToId: number | null
+  assignedToName: string | null
   lastActivityAt: Date | string
   createdAt: Date | string
   updatedAt: Date | string
+}
+
+export interface User {
+  id: number
+  name: string
+  email: string
+  role: string
+  createdAt: Date | string
 }
 
 export interface FollowUp {
