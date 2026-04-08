@@ -229,15 +229,22 @@ const aiSelections = computed<HotelSelection[]>(() => {
 })
 
 const hotelQuery = computed(() => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let payload: any = { destination: lead.value?.destination || '', limit: 10 }
   if (aiSelections.value.length) {
-    return { ids: aiSelections.value.map(s => s.id).join(',') }
+    payload = {
+      ...payload,
+      ids: aiSelections.value.map(s => s.id).join(','),
+      limit: 50
+    }
   }
-  return { destination: lead.value?.destination || '', limit: 6 }
+  return payload
 })
 
 const { data: hotels, pending: hotelsPending } = await useFetch<Hotel[]>('/api/hotels', {
   query: hotelQuery,
-  immediate: !!(lead.value?.destination || aiSelections.value.length)
+  immediate: !!(lead.value?.destination || aiSelections.value.length),
+  lazy: true
 })
 
 function hotelReason(hotelId: string): string | null {
@@ -895,7 +902,7 @@ function buildHotelDetailUrl(hotel: Hotel): string {
                 <UButton
                   :to="buildHotelDetailUrl(hotel)"
                   target="_blank"
-                  size="xs"
+                  size="sm"
                   color="primary"
                   variant="subtle"
                   icon="i-lucide-external-link"
